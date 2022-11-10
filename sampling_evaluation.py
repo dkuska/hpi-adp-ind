@@ -14,12 +14,13 @@ clip_output = True
 
 # Sampling settings
 sampling_mode = ['single_file', 'all_files'][0] #TODO: Actually implement this...
-# sampling_rates = [0.1, 0.01, 0.001]
-# sampling_methods = ['random', 'first']
+sampling_rates = [0.1, 0.01, 0.001]
+sampling_methods = ['random', 'first']
 
-sampling_rates = [0.1]
-sampling_methods = ['random']
+# sampling_rates = [0.1]
+# sampling_methods = ['random']
 
+# It does not really matter, how you set this parameter. Just needs to be globally defined for create_evaluation_result_csv to access it
 baseline_identifier = 'baseline_None_1'
 
 
@@ -137,8 +138,8 @@ def run():
     source_files = [os.path.join(os.getcwd(), source_dir, f) for f in os.listdir(os.path.join(os.getcwd(), source_dir)) if f.rsplit('.')[1] == 'csv']
     ## No Sampling - Baseline
     current_files_str = ' '.join(source_files)
-    call_metanome_cli(current_files_str, output_fname='abc')
-    evaluation_results[baseline_identifier] = parse_results('abc' + result_suffix)
+    call_metanome_cli(current_files_str, output_fname='baseline')
+    evaluation_results[baseline_identifier] = parse_results('baseline' + result_suffix)
     
     clean_results(results_folder)
 
@@ -152,7 +153,7 @@ def run():
                 current_files_str = ' '.join(all_but_current_files)
                 current_files_str += ' ' + new_file_name
                 
-                output_fname = 'def'
+                output_fname = 'experiment_result'
                 
                 ### Execute
                 call_metanome_cli(current_files_str, output_fname)
