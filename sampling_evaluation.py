@@ -5,10 +5,16 @@ import pandas as pd
 # Sampling settings
 arity               = ['unary', 'nary'][1]
 sampling_mode       = ['single_file', 'all_files'][0] #TODO: Actually implement all_files
-# sampling_rates      = [0.1, 0.01, 0.001]
-# sampling_methods    = ['random', 'first']
-sampling_rates      = [0.1]
-sampling_methods    = ['random']
+sampling_rates      = [0.1, 0.01, 0.001]
+sampling_methods    = ['random', 'first', 'evenly-spaced']
+# sampling_rates      = [0.1]
+# sampling_methods    = ['evenly-spaced']
+
+header              = False
+clip_output         = True
+print_inds          = False
+create_plots        = True
+
 # Paths, these dirs are assumed to already exist
 now = datetime.datetime.now()
 
@@ -18,10 +24,7 @@ results_folder      = 'results/'
 result_suffix       = '_inds'
 output_folder       = 'output/'
 output_file         = f'output_{arity}_{now.year}{now.month}{now.day}_{now.hour}{now.minute}{now.second}.csv'
-clip_output         = True
-header              = False
-print_inds          = False
-create_plots        = True
+plot_folder         = 'plots'
 
 # It does not really matter, how you set this parameter. Just needs to be globally defined for create_evaluation_result_csv to access it
 baseline_identifier = 'baseline_None_1'
@@ -51,6 +54,10 @@ def sample_csv(file_path, sampling_method, sampling_rate):
         data = random.sample(data, k=num_samples)
     elif sampling_method == 'first':
         data = data[:num_samples]
+    elif sampling_method == 'evenly-spaced':
+        space_width = math.ceil(num_entries / num_samples)
+        starting_index = random.randint(0, space_width)
+        data = [data[i%num_entries] for i in range(starting_index, num_entries+space_width, space_width)]
     elif sampling_method == 'kmeans':
         pass # TODO: implement this
     else:
@@ -163,8 +170,8 @@ def clean_results(results_folder):
 
 
 # TODO: Actually implement this
-def make_plots(output_file):
-    df = pd.read_csv(output_file)    
+def make_plots(output_file, plot_folder):
+    df = pd.read_csv(os.path.join(os.getcwd(), output_folder, output_file))    
     pass
 
 def run():
@@ -209,7 +216,7 @@ def run():
     clean_results(results_folder)
     
     if create_plots:
-        make_plots(output_file, plot_dir)
+        make_plots(output_file, plot_folder)
 
 if __name__ == "__main__":
     run()

@@ -1,3 +1,8 @@
 *.csv
 *.jar
-./BINDER_temp/
+BINDER_temp/*
+results/*
+src/*
+tmp/*
+plots/*
+output/*
