@@ -24,7 +24,7 @@ tmp_folder          = 'tmp/'
 results_folder      = 'results/'
 result_suffix       = '_inds'
 output_folder       = 'output/'
-output_file         = f'output_{arity}_{now.year}{now.month}{now.day}_{now.hour}{now.minute}{now.second}.csv'
+output_file         = f'output_{arity}_{now.year}{now.month:02d}{now.day}_{now.hour}{now.minute:02d}{now.second:02d}.csv'
 plot_folder         = 'plots/'
 
 # # It does not really matter, how you set this parameter. Just needs to be globally defined for create_evaluation_result_csv to access it
@@ -142,14 +142,14 @@ def create_evaluation_result_csv(eval, baseline_identifier, output_file):
     
     output_path = os.path.join(os.getcwd(), output_folder, output_file)
     
-    baseline_entry = eval[baseline_identifier]
-    baseline_num_inds = len(baseline_entry)
+    baseline_inds = eval[baseline_identifier]
+    baseline_num_inds = len(baseline_inds)
     
     with open(output_path, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
-        writer.writerow(['sampled_files', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn'])
+        writer.writerow(['sampled_files', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
         
-        for key, item in eval.items(): 
+        for key, inds in eval.items(): 
             sampled_file_paths = key.split(' ')
             sampled_file_names = [path.rsplit('/', 1)[1].replace('.csv', '') for path in sampled_file_paths]
             
@@ -158,6 +158,7 @@ def create_evaluation_result_csv(eval, baseline_identifier, output_file):
                 split_filename = sampled_file.split('_')
                 if len(split_filename) == 3:
                     fname, sampling_rate, sampling_method = split_filename
+                    sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
                 else:
                     fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
                     
@@ -166,12 +167,22 @@ def create_evaluation_result_csv(eval, baseline_identifier, output_file):
                 rates.append(sampling_rate)
 
             tp, fp = 0, 0
-    
-            for i in item:
-                if i in baseline_entry: tp += 1
+            num_inds = len(inds)
+            
+            for ind in inds:
+                if ind in baseline_inds: tp += 1
                 else: fp += 1
             
-            writer.writerow(['; '.join(file_names), '; '.join(methods), '; '.join(rates), tp, fp, baseline_num_inds - tp])
+            fn = baseline_num_inds - tp
+            
+            if num_inds > 0:
+                precision = tp / (tp + fp)
+                recall = tp / (tp + fn)    
+                f1 = 2*(precision * recall)/(precision + recall)
+            else:
+                precision, recall, f1 = 0,0,0
+            
+            writer.writerow(['; '.join(file_names), '; '.join(methods), '; '.join(rates), tp, fp, fn, f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}'])
 
 def clean_tmp_csv(tmp_folder):
     csv_files = [f for f in os.listdir(tmp_folder) if f.rsplit('.')[1] == 'csv']
@@ -233,6 +244,11 @@ def run():
     
     if create_plots:
         make_plots(output_file, plot_folder)
+
+# def parse_args():
+#     parser = argparse.ArgumentParser()
+#     parser.add_argument("--ratio", type=float)
+#     args = parser.parse_args()
 
 if __name__ == "__main__":
     run()
