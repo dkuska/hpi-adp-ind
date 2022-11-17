@@ -17,7 +17,7 @@ from models.metanome_run import (MetanomeRun, MetanomeRunConfiguration,
 
 ## GLOBAL CONFIGURATION PARAMETERS
 # Sampling settings
-arity               = ['unary', 'nary'][0]
+arity               = ['unary', 'nary'][1]
 # sampling_rates      = [0.1, 0.01, 0.001]
 # sampling_methods    = ['random', 'first', 'evenly-spaced']
 sampling_rates      = [0.1]
@@ -141,6 +141,7 @@ def make_plots(output_file: str, plot_folder: str):
         df_method,
         x='method',
         hue='type',
+        hue_order=['tp', 'fp'],
         multiple='stack',
         ax=ax1,
         linewidth=.3,
@@ -166,6 +167,7 @@ def make_plots(output_file: str, plot_folder: str):
         df_rate,
         x='rate',
         hue='type',
+        hue_order=['tp', 'fp'],
         multiple='stack',
         ax=ax2,
         linewidth=.3,
@@ -176,7 +178,7 @@ def make_plots(output_file: str, plot_folder: str):
     ax2.set_xlabel("Sampling Rates")
     ax2.set_ylabel("Count")
     
-    plot_fname = f'plots_{arity}_{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.min:02d}{now.second:02d}.jpg' 
+    plot_fname = f'plots_{arity}_{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.minute:02d}{now.second:02d}.jpg' 
     
     f.savefig(os.path.join(os.getcwd(), plot_folder, plot_fname)) 
 
