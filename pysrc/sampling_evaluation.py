@@ -8,6 +8,8 @@ import random
 import uuid
 
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from utils.enhanced_json_encoder import EnhancedJSONEncoder
 from models.metanome_run import (MetanomeRun, MetanomeRunConfiguration,
@@ -24,7 +26,7 @@ sampling_methods    = ['evenly-spaced']
 header              = False
 clip_output         = True
 print_inds          = False
-create_plots        = False
+create_plots        = True
 
 # Paths, these dirs are assumed to already exist
 now = datetime.datetime.now()
@@ -119,8 +121,64 @@ def clean_results(results_folder: str) -> None:
 
 # TODO: Actually implement this
 def make_plots(output_file: str, plot_folder: str):
-    df = pd.read_csv(os.path.join(os.getcwd(), output_folder, output_file))    
-    pass
+    df = pd.read_csv(os.path.join(os.getcwd(), output_folder, output_file + '.csv'))   
+    
+    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 15))
+    sns.despine(f)
+    
+    df_method = df.groupby('sampling_method')
+    d = []
+    for method, frame in df_method:
+        for i in range(int(frame['tp'].mean())):
+            d.append([method,'tp', 1])
+        for i in range(int(frame['fp'].mean())):
+            d.append([method,'fp', 1])
+        # for i in range(int(frame['fn'].mean())):
+        #     d.append([method,'fn', 1])
+        
+    df_method = pd.DataFrame(d, columns=['method', 'type', 'count'])
+    sns.histplot(
+        df_method,
+        x='method',
+        hue='type',
+        multiple='stack',
+        ax=ax1,
+        linewidth=.3,
+    )
+    ax1.tick_params(axis='x', rotation=90)
+    ax1.tick_params(axis='x', labelsize=4)
+    ax1.set_xlabel("Sampling Mehods")
+    ax1.set_ylabel("Count")
+    
+    df_rate = df.groupby('sampling_rate')
+    d = []
+    for rate, frame in df_rate:
+        for i in range(int(frame['tp'].mean())):
+            d.append([rate,'tp', 1])
+        for i in range(int(frame['fp'].mean())):
+            d.append([rate,'fp', 1])
+        # for i in range(int(frame['fn'].mean())):
+        #     d.append([rate,'fn', 1])
+
+    df_rate = pd.DataFrame(d, columns=['rate', 'type', 'count'])
+    
+    sns.histplot(
+        df_rate,
+        x='rate',
+        hue='type',
+        multiple='stack',
+        ax=ax2,
+        linewidth=.3,
+    )
+    
+    ax2.tick_params(axis='x', rotation=90)
+    ax2.tick_params(axis='x', labelsize=4)
+    ax2.set_xlabel("Sampling Rates")
+    ax2.set_ylabel("Count")
+    
+    plot_fname = f'plots_{arity}_{now.year}{now.month:02d}{now.day:02d}_{now.hour:02d}{now.min:02d}{now.second:02d}.jpg' 
+    
+    f.savefig(os.path.join(os.getcwd(), plot_folder, plot_fname)) 
 
 
 def run():
