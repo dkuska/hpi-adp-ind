@@ -9,8 +9,8 @@ import uuid
 
 import pandas as pd
 
-from enhanced_json_encoder import EnhancedJSONEncoder
-from metanome_run import (MetanomeRun, MetanomeRunConfiguration,
+from utils.enhanced_json_encoder import EnhancedJSONEncoder
+from models.metanome_run import (MetanomeRun, MetanomeRunConfiguration,
                           run_as_compared_csv_line, run_metanome)
 
 ## GLOBAL CONFIGURATION PARAMETERS

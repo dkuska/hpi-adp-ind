@@ -3,9 +3,9 @@ from dataclasses import dataclass
 import json
 import os
 from typing import Iterator, Optional
-from column_information import ColumnInformation
+from models.column_information import ColumnInformation
 
-from ind import IND
+from models.ind import IND
 
 
 @dataclass(frozen=True)

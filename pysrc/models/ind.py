@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from column_information import ColumnInformation
+from models.column_information import ColumnInformation
 
 
 @dataclass(frozen=True)
