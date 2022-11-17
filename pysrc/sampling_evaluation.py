@@ -48,7 +48,7 @@ def sample_csv(file_path: str, sampling_method: str, sampling_rate: float) -> st
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Read data
     with open(file_path, 'r') as file:
-        reader = csv.reader(file)
+        reader = csv.reader(file, delimiter=';')
         data = list(reader)
         
     if header:
@@ -75,7 +75,7 @@ def sample_csv(file_path: str, sampling_method: str, sampling_rate: float) -> st
         pass
         
     with open(new_file_path, 'w') as file:
-        writer = csv.writer(file)
+        writer = csv.writer(file, delimiter=';')
         if header:
             writer.writerow(file_header)
         
@@ -105,7 +105,7 @@ def create_evaluation_result(eval: list[MetanomeRun], output_file: str, write_js
             json.dump(eval, json_output, ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
 
 
-def clean_tmp_csv(tmp_folder):
+def clean_tmp_csv(tmp_folder: str) -> None:
     csv_files = [f for f in os.listdir(tmp_folder) if f.rsplit('.')[1] == 'csv']
     for tmp_file in csv_files:
         os.remove(os.path.join(os.getcwd(), tmp_folder, tmp_file))

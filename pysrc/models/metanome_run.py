@@ -166,7 +166,7 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     if num_inds > 0:
         precision = tp / (tp + fp)
         recall = tp / (tp + fn)    
-        f1 = 2*(precision * recall)/(precision + recall)
+        f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
     else:
         precision, recall, f1 = 0, 0, 0
 
