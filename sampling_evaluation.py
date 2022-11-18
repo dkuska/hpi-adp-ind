@@ -2,6 +2,7 @@ import os, csv, random, math, json, sys, datetime, uuid
 import argparse
 import itertools
 import pandas as pd
+from collections import defaultdict
 
 ## GLOBAL CONFIGURATION PARAMETERS
 # Sampling settings
@@ -31,50 +32,59 @@ plot_folder         = 'plots/'
 # baseline_identifier = 'baseline_None_1'
 
 ## Sample a single file with a certain method and rate and create a new tmp file
-# TODO: Add support for headers
+# TODO: Add support for headers still ongoing
 # TODO: Add support for more sampling methods
+# Perspektivisch die Signatur anpassen --> Methode anhand der Daten bestimmen
 def sample_csv(file_path, sampling_method, sampling_rate):
     data = []
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Read data
-    with open(file_path, 'r') as file:
-        reader = csv.reader(file)
-        data = list(reader)
-        
-    if header:
-        file_header = data[0]
-        data = data[1:]
-        
-    num_entries = len(data)
-    num_samples = math.ceil(num_entries * sampling_rate)      
+    columns = defaultdict(list)
+    with open(file_path, 'r') as f:
+        #Input abhängig machen, was passiert mit Headern
+        reader = csv.reader(f, delimiter=';', quotechar='"', escapechar='\\')
+        for row in reader:
+            for i in range(len(row)):
+                columns[i].append(row[i])
+    #    data = list(reader)
 
-    new_file_name = file_prefix + '_' + str(sampling_rate).replace('.', '') + '_' + sampling_method + '.csv'
-    new_file_path = os.path.join(os.getcwd(), tmp_folder, new_file_name)
-    
-    if sampling_method == 'random':
-        data = random.sample(data, k=num_samples)
-    elif sampling_method == 'first':
-        data = data[:num_samples]
-    elif sampling_method == 'evenly-spaced':
-        space_width = math.ceil(num_entries / num_samples)
-        starting_index = random.randint(0, space_width)
-        data = [data[i%num_entries] for i in range(starting_index, num_entries+space_width, space_width)]
-    elif sampling_method == 'kmeans':
-        pass # TODO: implement this
-    else:
-        pass
-        
-    with open(new_file_path, 'w') as file:
-        writer = csv.writer(file)
+    for col in columns:
+
         if header:
-            writer.writerow(file_header)
-        
-        writer.writerows(data)
+            file_header = data[0]
+            data = data[1:]
+
+        num_entries = len(columns[col])
+        num_samples = math.ceil(num_entries * sampling_rate)
+
+        new_file_name = file_prefix + '_' + str(sampling_rate) + '_Col_' + str(col).replace('.', '') + '_' + sampling_method + '.csv'
+        new_file_path = os.path.join(os.getcwd(), tmp_folder, new_file_name)
+
+
+        if sampling_method == 'random':
+            data = random.sample(columns[col], k=num_samples)
+        elif sampling_method == 'first':
+            data = columns[col][:num_samples]
+        elif sampling_method == 'evenly-spaced':
+            space_width = math.ceil(num_entries / num_samples)
+            starting_index = random.randint(0, space_width)
+            data = [columns[col][i%num_entries] for i in range(starting_index, num_entries+space_width-1, space_width)]
+        elif sampling_method == 'kmeans':
+            pass # TODO: implement this
+        else:
+            pass
+
+        with open(new_file_path, 'w') as file:
+            writer = csv.writer(file)
+            if header:
+                writer.writerow()
+
+            writer.writerows((item,) for item in data)
 
     return new_file_path
 
 def call_metanome_cli(file_name_list, output_fname='', clip_output=clip_output):
-    execute_str = f'java -cp metanome-cli.jar:BINDER.jar de.metanome.cli.App \
+    execute_str = f'java -cp metanome-cli-1.2-SNAPSHOT.jar:BINDER.jar de.metanome.cli.App \
                     --algorithm de.metanome.algorithms.binder.BINDERFile \
                     --files {file_name_list} \
                     --separator \; \
@@ -215,6 +225,7 @@ def run():
             for sampling_rate in sampling_rates:
                 ### Sample
                 new_file_name = sample_csv(file_path, sampling_method, sampling_rate)
+                #TODO Return List of csv to append
                 samples[i].append(new_file_name)
                 
     ### Build cartesian product of all possible file combinations
