@@ -72,7 +72,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependants=[dependant], referenced=[referenced])
+            ind = IND(dependents=[dependant], referenced=[referenced])
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
         elif arity == 'nary':
             dependant_list: list[ColumnInformation] = []
@@ -94,7 +94,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
                 referenced_list.append(referenced)
 
             # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
-            ind = IND(dependants=dependant_list, referenced=referenced_list)
+            ind = IND(dependents=dependant_list, referenced=referenced_list)
         else:
             continue
 
