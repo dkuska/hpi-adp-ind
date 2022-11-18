@@ -1,11 +1,11 @@
 import datetime
-from dataclasses import dataclass
 import json
 import os
+from dataclasses import dataclass
 from typing import Iterator, Optional
-from models.column_information import ColumnInformation
 
-from models.ind import IND
+from pysrc.models.column_information import ColumnInformation
+from pysrc.models.ind import IND
 
 
 @dataclass(frozen=True)
@@ -14,7 +14,7 @@ class MetanomeRunConfiguration:
     arity: str
     sampling_rates: list[float]
     sampling_methods: list[str]
-    time: datetime.date
+    time: datetime.datetime
 
     source_dir: str
     source_files: list[str]
@@ -46,6 +46,21 @@ class MetanomeRunResults:
 class MetanomeRun:
     configuration: MetanomeRunConfiguration
     results: MetanomeRunResults
+
+
+@dataclass(frozen=True)
+class MetanomeRunBatch:
+    runs: list[MetanomeRun]
+
+    def __len__(self) -> int:
+        return len(self.runs)
+
+    def __iter__(self) -> Iterator[MetanomeRun]:
+        return self.runs.__iter__()
+
+    @property
+    def baseline(self) -> MetanomeRun:
+        return next(run for run in self.runs if run.configuration.is_baseline)
 
 
 def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool) -> MetanomeRunResults:
@@ -170,4 +185,4 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     else:
         precision, recall, f1 = 0, 0, 0
 
-    return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), tp, fp, fn, f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+    return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
