@@ -37,11 +37,12 @@ plot_folder         = 'plots/'
 # Perspektivisch die Signatur anpassen --> Methode anhand der Daten bestimmen
 def sample_csv(file_path, sampling_method, sampling_rate):
     data = []
+    samples = []
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Read data
     columns = defaultdict(list)
     with open(file_path, 'r') as f:
-        #Input abhängig machen, was passiert mit Headern
+        #TODO Input abhängig machen, was passiert mit Headern
         reader = csv.reader(f, delimiter=';', quotechar='"', escapechar='\\')
         for row in reader:
             for i in range(len(row)):
@@ -57,7 +58,7 @@ def sample_csv(file_path, sampling_method, sampling_rate):
         num_entries = len(columns[col])
         num_samples = math.ceil(num_entries * sampling_rate)
 
-        new_file_name = file_prefix + '_' + str(sampling_rate) + '_Col_' + str(col).replace('.', '') + '_' + sampling_method + '.csv'
+        new_file_name = file_prefix + '_' + str(sampling_rate).replace('.', '') + '_' + sampling_method + '_Col_' + str(col+1) +'.csv'
         new_file_path = os.path.join(os.getcwd(), tmp_folder, new_file_name)
 
 
@@ -81,7 +82,9 @@ def sample_csv(file_path, sampling_method, sampling_rate):
 
             writer.writerows((item,) for item in data)
 
-    return new_file_path
+        samples.append([new_file_path])
+
+    return samples
 
 def call_metanome_cli(file_name_list, output_fname='', clip_output=clip_output):
     execute_str = f'java -cp metanome-cli-1.2-SNAPSHOT.jar:BINDER.jar de.metanome.cli.App \
@@ -169,6 +172,11 @@ def create_evaluation_result_csv(eval, baseline_identifier, output_file):
                 if len(split_filename) == 3:
                     fname, sampling_rate, sampling_method = split_filename
                     sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
+                elif len(split_filename) == 5:
+                    fname = split_filename[0] + split_filename[4]
+                    sampling_rate = split_filename[1]
+                    sampling_method = split_filename[2]
+                    sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
                 else:
                     fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
                     
@@ -180,9 +188,20 @@ def create_evaluation_result_csv(eval, baseline_identifier, output_file):
             num_inds = len(inds)
             
             for ind in inds:
-                if ind in baseline_inds: tp += 1
-                else: fp += 1
-            
+                split_found_ind = ind.split((' '))
+                ref = split_found_ind[0].split('_')
+                dep = split_found_ind[2].split('_')
+                #TODO sides need to be checked and column count in BINDER too
+                if len(ref)==5:
+                    refOut = (ref[0] + ".column" + ref[4]).split('.')
+                    depOut = (dep[0] + ".column" + dep[4]).split('.')
+                    Out = refOut[0] + '.' + refOut[1] + ' [= ' + depOut[0] + '.' + depOut[1]
+                    if Out in baseline_inds: tp += 1
+                    else: fp += 1
+                else:
+                    if ind in baseline_inds: tp += 1
+                    else: fp += 1
+
             fn = baseline_num_inds - tp
             
             if num_inds > 0:
@@ -217,8 +236,8 @@ def run():
     experiments = {}
     source_files = [os.path.join(os.getcwd(), source_dir, f) for f in os.listdir(os.path.join(os.getcwd(), source_dir)) if f.rsplit('.')[1] == 'csv']
     baseline_identifier = " ".join(source_files)
-    
-    samples = [[src_file] for src_file in source_files]
+
+    samples = []
     ### Sample each source file with each sampling configuration
     for i, file_path in enumerate(source_files):
         for sampling_method in sampling_methods:
@@ -226,13 +245,22 @@ def run():
                 ### Sample
                 new_file_name = sample_csv(file_path, sampling_method, sampling_rate)
                 #TODO Return List of csv to append
-                samples[i].append(new_file_name)
-                
+                samples.extend(new_file_name)
+
+    #Create Baseline run
+    output_fname = str(uuid.uuid4())
+    if print_inds:
+        print(f'current_files_str : {baseline_identifier}')
+        print(f'output_fname   : {output_fname}')
+    call_metanome_cli(baseline_identifier, output_fname)
+    experiments[baseline_identifier] = output_fname
+
     ### Build cartesian product of all possible file combinations
     ### And run experiment for each
+    #TODO easy checking only combinations of same datatypes
     for file_combination in itertools.product(*samples):
         current_files_str = " ".join(file_combination)
-        
+
         output_fname = str(uuid.uuid4())
         if print_inds:
             print(f'current_files_str : {current_files_str}')
