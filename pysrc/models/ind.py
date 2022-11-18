@@ -5,7 +5,7 @@ from pysrc.models.column_information import ColumnInformation
 
 @dataclass(frozen=True)
 class IND:
-    """Represents a single, nnary ind"""
+    """Represents a single, nary ind"""
     dependents: list[ColumnInformation]
 
     referenced: list[ColumnInformation]
