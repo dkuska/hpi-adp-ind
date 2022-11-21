@@ -42,7 +42,7 @@ class GlobalConfiguration:
         return cls(
             arity=arity,
             sampling_rates=[0.1],
-            sampling_methods=['evenly_spaced'],
+            sampling_methods=['evenly-spaced'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),
             print_inds=cls._construct_from_default(args, 'print_inds', bool, False),
