@@ -35,6 +35,43 @@ class MetanomeRunConfiguration:
 class MetanomeRunResults:
     inds: list[IND]
 
+    def has_ind(self, other_ind: IND) -> bool:
+        """This checks whether this object has an IND that is identical to the passed-in one,
+        i.e. whether they are from the same table and column, but may differ by name"""
+        # Check whether it's directly contained
+        if other_ind in self.inds:
+            return True
+        clean_other_ind = IND(
+            dependents=[
+                ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                for column
+                in other_ind.dependents
+            ], referenced=[
+                ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                for column
+                in other_ind.referenced
+            ])
+        # Check whether cleaned other is directly contained
+        if clean_other_ind in self.inds:
+            return True
+
+        clean_inds = [
+            IND(
+                dependents=[
+                    ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                    for column
+                    in ind.dependents
+                ], referenced=[
+                    ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                    for column
+                    in ind.referenced
+                ])
+            for ind
+            in self.inds
+        ]
+        # Check whether cleaned version is in cleaned version
+        return clean_other_ind in clean_inds
+
     def __len__(self) -> int:
         return len(self.inds)
 
@@ -171,7 +208,8 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     num_inds = len(inds)
 
     for ind in inds:
-        if ind in baseline.inds:
+        if baseline.has_ind(ind):
+        # if ind in baseline.inds:
             tp += 1
         else:
             fp += 1
