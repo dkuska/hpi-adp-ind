@@ -108,14 +108,15 @@ class MetanomeRunBatch:
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
     
-    def tuples_to_remove(self) -> dict[MetanomeRun, float]:
-        """Returns the average number of rows to remove such that false positive INDs become real"""
+    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float]]:
+        """Returns the average number (absolute & relative) of rows to remove such that false positive INDs become real"""
         baseline = self.baseline
-        results: dict[MetanomeRun, float] = {}
+        results: dict[MetanomeRun, tuple[float, float]] = {}
         for run in self.runs:
-            run_results: dict[IND, int] = tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
-            avg = statistics.fmean([value for value in run_results.values()])
-            results[run] = avg
+            run_results: dict[IND, tuple[int, float]] = tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
+            avg_abs = statistics.fmean([value[0] for value in run_results.values()])
+            avg_rel = statistics.fmean([value[1] for value in run_results.values()])
+            results[run] = (avg_abs, avg_rel)
         return results
 
 
