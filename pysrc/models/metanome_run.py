@@ -43,11 +43,11 @@ class MetanomeRunResults:
             return True
         clean_other_ind = IND(
             dependents=[
-                ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
                 for column
                 in other_ind.dependents
             ], referenced=[
-                ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
                 for column
                 in other_ind.referenced
             ])
@@ -58,11 +58,11 @@ class MetanomeRunResults:
         clean_inds = [
             IND(
                 dependents=[
-                    ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                    ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
                     for column
                     in ind.dependents
                 ], referenced=[
-                    ColumnInformation(table_name=column.table_name.split('_')[0], column_name=column.column_name)
+                    ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
                     for column
                     in ind.referenced
                 ])
@@ -165,11 +165,12 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
     separator = '\\;'
     output_rule = f'file:{output_fname}'
+    allowed_gb: int = 6
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
 
-    execute_str = f'java -cp {metanome_cli_path}:{algorithm_path} de.metanome.cli.App \
+    execute_str = f'java -Xmx{allowed_gb}g -cp {metanome_cli_path}:{algorithm_path} de.metanome.cli.App \
                     --algorithm {algorithm_class_name} \
                     --files {file_name_list} \
                     --separator {separator} \
@@ -192,7 +193,14 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
 
     file_names, methods, rates = [],[],[]
     for sampled_file in sampled_file_names:
-        split_filename = sampled_file.split('_')
+        split_filename = sampled_file.split('__')
+        split_metadata = []
+        if len(split_filename) == 2:
+            split_metadata = split_filename[1].split('_')
+        split_filename = [split_filename[0]]
+        if len(split_metadata) == 2:
+            split_filename.append(split_metadata[0])
+            split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
             fname, sampling_rate, sampling_method = split_filename
             sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]

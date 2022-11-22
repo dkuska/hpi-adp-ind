@@ -34,7 +34,7 @@ def sample_csv(file_path: str,
     num_entries = len(data)
     num_samples = math.ceil(num_entries * sampling_rate)
 
-    new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}.csv'
+    new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}.csv'
     new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
     sampling_method_function = sampling_methods_dict[sampling_method]
