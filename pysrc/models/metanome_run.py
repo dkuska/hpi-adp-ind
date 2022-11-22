@@ -7,7 +7,7 @@ from typing import Iterator
 from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
-from pysrc.models.errors import ErrorMetric, TuplesToRemove
+from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove
 from pysrc.models.ind import IND
 
 
@@ -247,9 +247,10 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
 
     for ind in inds:
         if baseline.has_ind(ind):
-        # if ind in baseline.inds:
+            ind.errors.append(INDType('TP'))
             tp += 1
         else:
+            ind.errors.append(INDType('FP'))
             fp += 1
 
     fn = len(baseline.inds) - tp
