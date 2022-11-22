@@ -7,6 +7,7 @@ from typing import Iterator
 from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
+from pysrc.models.errors import ErrorMetric, TuplesToRemove
 from pysrc.models.ind import IND
 
 
@@ -113,9 +114,18 @@ class MetanomeRunBatch:
         baseline = self.baseline
         results: dict[MetanomeRun, tuple[float, float]] = {}
         for run in self.runs:
-            run_results: dict[IND, tuple[int, float]] = tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
-            avg_abs = statistics.fmean([value[0] for value in run_results.values()])
-            avg_rel = statistics.fmean([value[1] for value in run_results.values()])
+            tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
+            run_results: dict[IND, list[ErrorMetric]] = {ind: ind.errors for ind in run.results.inds}
+            tuples_to_remove_errors: list[TuplesToRemove] = [
+                error
+                for sublist
+                in run_results.values()
+                for error
+                in sublist
+                if isinstance(error, TuplesToRemove)
+            ]
+            avg_abs = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
             results[run] = (avg_abs, avg_rel)
         return results
 

@@ -1,12 +1,13 @@
 import csv
 import itertools
-from ..models.ind import IND
+
+from pysrc.models.errors import TuplesToRemove
 from ..models import metanome_run
 
 
-def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration', experiment: 'metanome_run.MetanomeRun') -> dict[IND, tuple[int, float]]:
-    """Get, for every IND, the absolute and relative numbers of tuples that have to be removed from the baseline such that this IND is valid"""
-    result: dict[IND, tuple[int, float]] = {}
+def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration', experiment: 'metanome_run.MetanomeRun') -> None:
+    """Get, for every IND, the absolute and relative numbers of tuples that have to be removed from the baseline such that this IND is valid.
+    This adds TuplesToRemove to the errors list of each IND"""
     for ind in experiment.results.inds:
         # Format: (file_path, column_name)
         dependent_files: list[tuple[str, str]] = []
@@ -30,8 +31,8 @@ def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration'
         dependent_data = data_from_files(dependent_files, file_contents)
         referenced_data = data_from_files(referenced_files, file_contents)
         dependent_entries_to_remove = check_tuple_pair(dependent_data=dependent_data, referenced_data=referenced_data)
-        result[ind] = (dependent_entries_to_remove, dependent_entries_to_remove / len(dependent_data))
-    return result
+        result = TuplesToRemove(absolute_tuples_to_remove=dependent_entries_to_remove, relative_tuples_to_remove=dependent_entries_to_remove / len(dependent_data))
+        ind.errors.append(result)
 
 
 def data_from_files(files: list[tuple[str, str]], file_contents: dict[str, list[list[str]]]) -> list[tuple[str,  ...]]:
