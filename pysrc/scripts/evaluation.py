@@ -119,6 +119,7 @@ def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Opt
     csv_path = create_evaluation_csv(experiments, config.output_file, config)
     if config.create_plots:
         plot_path = make_plots(config.output_file, config.plot_folder, config)
+    print(experiments.tuples_to_remove())
     match args.return_path:
         case 'csv':
             return csv_path

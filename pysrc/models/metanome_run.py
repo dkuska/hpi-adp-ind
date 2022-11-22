@@ -2,7 +2,9 @@ import datetime
 import json
 import os
 from dataclasses import dataclass
-from typing import Iterator, Optional
+import statistics
+from typing import Iterator
+from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
 from pysrc.models.ind import IND
@@ -29,6 +31,10 @@ class MetanomeRunConfiguration:
     create_plots: bool
 
     is_baseline: bool
+
+    def __hash__(self) -> int:
+        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir, tuple(self.source_files), self.tmp_folder, self.results_folder,
+        self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
 
 
 @dataclass(frozen=True)
@@ -78,6 +84,9 @@ class MetanomeRunResults:
     def __iter__(self) -> Iterator[IND]:
         return self.inds.__iter__()
 
+    def __hash__(self) -> int:
+        return hash((tuple(self.inds)))
+
 
 @dataclass(frozen=True)
 class MetanomeRun:
@@ -98,6 +107,16 @@ class MetanomeRunBatch:
     @property
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
+    
+    def tuples_to_remove(self) -> dict[MetanomeRun, float]:
+        """Returns the average number of rows to remove such that false positive INDs become real"""
+        baseline = self.baseline
+        results: dict[MetanomeRun, float] = {}
+        for run in self.runs:
+            run_results: dict[IND, int] = tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
+            avg = statistics.fmean([value for value in run_results.values()])
+            results[run] = avg
+        return results
 
 
 def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool) -> MetanomeRunResults:
