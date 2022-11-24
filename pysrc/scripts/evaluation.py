@@ -2,14 +2,14 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional
+from typing import Literal, Optional
 from dacite import from_dict
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from pysrc.utils.enhanced_json_encoder import EnhancedJSONDecoder
+from pysrc.utils.enhanced_json_encoder import EnhancedJSONDecoder, EnhancedJSONEncoder
 
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
@@ -105,10 +105,37 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
     return plot_path
 
 
+def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], config: GlobalConfiguration, output_file: str) -> str:
+    tuples_to_remove = experiments.tuples_to_remove()
+    if mode == 'interactive':
+        print('### Tuples To Remove ###')
+        print('When looking into the shown file combinations, on average that many tuples have to be removed to make all found INDs TPs.')
+        print('The data is presented as (absolute number of tuples to be removed, relative percentage of tuples to be removed).')
+        print({
+            tuple([
+                file.rsplit('/', 1)[1]
+                for file
+                in run.configuration.source_files
+            ]): error
+            for run, error
+            in tuples_to_remove.items()
+            if error[0] + error[1] > 0.0
+        })
+    # Always print results in detail to a file
+    output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
+    output_json = f'{output_path}_with_errors.json'
+    with open(output_json, 'w', encoding='utf-8') as json_file:
+        json.dump(experiments, json_file,
+                 ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
+    
+    return output_json
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=True, help='The JSON file containing the experiment information to be evaluated')
-    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`) or of the plot (`plot`)')
+    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the error metrics (`error`)')
+    parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
     GlobalConfiguration.argparse_arguments(parser)
     args = parser.parse_args()
     return args
@@ -119,12 +146,14 @@ def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Opt
     csv_path = create_evaluation_csv(experiments, config.output_file, config)
     if config.create_plots:
         plot_path = make_plots(config.output_file, config.plot_folder, config)
-    print(experiments.tuples_to_remove())
+    error_path = collect_error_metrics(experiments, 'interactive' if args.interactive == True else 'file', config, config.output_file)
     match args.return_path:
         case 'csv':
             return csv_path
         case 'plot':
             return plot_path
+        case 'error':
+            return error_path
         case _:
             return None
 
