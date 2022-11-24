@@ -107,7 +107,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
     baseline_identifier = ' '.join(source_files)
     #TODO replace sample with baseline ind
     #Find clever way for column based sampling
-    samples: list[list[tuple[str, str, float]]] = [
+    baselineset: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]
         for src_file
         in source_files
@@ -115,12 +115,13 @@ def run_experiments(config: GlobalConfiguration) -> str:
 
     # TODO new execution arm for the sampled data with new sample list. Create Function to give valuable Combinations
     # Sample each source file
+    samples = []
     for i, file_path in enumerate(source_files):
         for sampling_method in config.sampling_methods:
             for sampling_rate in config.sampling_rates:
                 # Sample
                 new_file_name = sample_csv(file_path, sampling_method, sampling_rate, config)
-                samples[i].extend((new_file_name, sampling_method, sampling_rate))
+                samples.extend([new_file_name])
 
 
     # Build cartesian product of all possible file combinations
