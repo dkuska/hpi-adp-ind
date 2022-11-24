@@ -6,12 +6,11 @@ import math
 import os
 import uuid
 
-from ..configuration import GlobalConfiguration
-from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
-                                   MetanomeRunConfiguration, run_metanome)
-from ..sampling_methods import sampling_methods_dict
-from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
-
+from pysrc.configuration import GlobalConfiguration
+from pysrc.models.metanome_run import MetanomeRun, MetanomeRunBatch, MetanomeRunConfiguration, run_metanome
+from pysrc.sampling_methods import sampling_methods_dict
+from pysrc.utils.enhanced_json_encoder import EnhancedJSONEncoder
+from collections import defaultdict
 
 def sample_csv(file_path: str,
                sampling_method: str,
@@ -20,34 +19,45 @@ def sample_csv(file_path: str,
     """Sample a single file with a certain method and rate
     and create a new tmp file. Returns the path to the sampled file.
     """
-    data: list[list[str]] = []
+
+    samples: list[list[tuple[str, str, float]]] = []
+
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
-    # Read data
-    with open(file_path, 'r') as file:
-        reader = csv.reader(file, delimiter=';')
-        data = list(reader)
+    columns = defaultdict(list)
 
-    if config.header:
-        file_header = data[0]
-        data = data[1:]
+    with open(file_path, 'r') as f:
+        #TODO Input abhängig machen, was passiert mit Headern
+        reader = csv.reader(f, delimiter=';', quotechar='"', escapechar='\\')
+        for row in reader:
+            for i in range(len(row)):
+                columns[i].append(row[i])
 
-    num_entries = len(data)
-    num_samples = math.ceil(num_entries * sampling_rate)
+    for col in columns:
 
-    new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}.csv'
-    new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
-
-    sampling_method_function = sampling_methods_dict[sampling_method]
-    data = sampling_method_function(data, num_samples, num_entries)
-
-    with open(new_file_path, 'w') as file:
-        writer = csv.writer(file, delimiter=';')
         if config.header:
-            writer.writerow(file_header)
+            file_header = columns[col][0]
+            data = columns[col][1:]
 
-        writer.writerows(data)
+        num_entries = len(columns[col])
+        num_samples = math.ceil(num_entries * sampling_rate)
 
-    return new_file_path
+        #rename files column specific
+        new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}_{col}.csv'
+        new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
+
+        sampling_method_function = sampling_methods_dict[sampling_method]
+        data = sampling_method_function(columns[col], num_samples, num_entries)
+
+        with open(new_file_path, 'w') as file:
+            writer = csv.writer(file)
+            if config.header:
+                writer.writerow()
+
+            writer.writerows((item,) for item in data)
+        out_tuple = [(new_file_path, sampling_method, sampling_rate)]
+        samples.extend(out_tuple)
+
+    return samples
 
 
 def create_result_json(runs: MetanomeRunBatch,
@@ -67,10 +77,10 @@ def create_result_json(runs: MetanomeRunBatch,
 
 
 def clean_tmp_csv(tmp_folder: str) -> None:
+    print(tmp_folder)
     csv_files = [
         f
-        for f
-        in os.listdir(tmp_folder)
+        for f in os.listdir(tmp_folder)
         if f.rsplit('.')[1] == 'csv']
     for tmp_file in csv_files:
         os.remove(os.path.join(os.getcwd(), tmp_folder, tmp_file))
@@ -95,21 +105,24 @@ def run_experiments(config: GlobalConfiguration) -> str:
         if f.rsplit('.')[1] == 'csv'
     ]
     baseline_identifier = ' '.join(source_files)
-
+    #TODO replace sample with baseline ind
+    #Find clever way for column based sampling
     samples: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]
         for src_file
         in source_files
     ]
 
+    # TODO new execution arm for the sampled data with new sample list. Create Function to give valuable Combinations
     # Sample each source file
     for i, file_path in enumerate(source_files):
         for sampling_method in config.sampling_methods:
             for sampling_rate in config.sampling_rates:
                 # Sample
                 new_file_name = sample_csv(file_path, sampling_method, sampling_rate, config)
-                samples[i].append((new_file_name, sampling_method, sampling_rate))
-    
+                samples[i].extend((new_file_name, sampling_method, sampling_rate))
+
+
     # Build cartesian product of all possible file combinations
     configurations: list[MetanomeRunConfiguration] = []
     for file_combination_setup in itertools.product(*samples):
