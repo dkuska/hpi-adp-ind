@@ -1,7 +1,7 @@
 import csv
 import itertools
 
-from pysrc.models.errors import TuplesToRemove
+from pysrc.models.errors import INDType, TuplesToRemove
 from ..models import metanome_run
 
 
@@ -9,6 +9,11 @@ def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration'
     """Get, for every IND, the absolute and relative numbers of tuples that have to be removed from the baseline such that this IND is valid.
     This adds TuplesToRemove to the errors list of each IND"""
     for ind in experiment.results.inds:
+        # If we already know this is a TP, we don't have to check it (no tuples have to be removed)
+        if next((error.ind_type for error in ind.errors if isinstance(error, INDType)), None) == 'TP':
+            result = TuplesToRemove(0, 0)
+            ind.errors.append(result)
+            continue
         # Format: (file_path, column_name)
         dependent_files: list[tuple[str, str]] = []
         for dependant in ind.dependents:
