@@ -61,7 +61,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
         df_method,
         x='method',
         hue='type',
-        hue_order=['tp', 'fp'],
+        hue_order=['tp', 'fp', 'fn'],
         multiple='stack',
         ax=ax1,
         linewidth=.3,
@@ -78,8 +78,8 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
             d.append([rate,'tp', 1])
         for i in range(int(frame['fp'].mean())):
             d.append([rate,'fp', 1])
-        # for i in range(int(frame['fn'].mean())):
-        #     d.append([rate,'fn', 1])
+        for i in range(int(frame['fn'].mean())):
+            d.append([rate,'fn', 1])
 
     df_rate = pd.DataFrame(d, columns=['rate', 'type', 'count'])
     
@@ -87,7 +87,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
         df_rate,
         x='rate',
         hue='type',
-        hue_order=['tp', 'fp'],
+        hue_order=['tp', 'fp', 'fn'],
         multiple='stack',
         ax=ax2,
         linewidth=.3,
