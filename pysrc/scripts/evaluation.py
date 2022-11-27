@@ -76,6 +76,10 @@ def create_TpFpFn_stacked_barplot(df: pd.DataFrame, groupby_attrs: list[str], pl
 
 def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
+    many_plots = False
+    if len(df_grouped) > 10:
+        many_plots = True
+    
     d = []
     for group_identifier, frame in df_grouped:
         for _ in range(int(frame['tp'].mean())):
@@ -96,8 +100,9 @@ def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataf
         discrete=True,
         linewidth=.3
     )
-    axes.tick_params(axis='x', rotation=90)
-    axes.tick_params(axis='x', labelsize=4)
+    if many_plots: # If there are too many entries, attempt to make it somewhat readable...
+        axes.tick_params(axis='x', rotation=90)
+        axes.tick_params(axis='x', labelsize=4)
     axes.set_xlabel(f"{groupby_attr}")
     axes.set_ylabel("IND Count")
     
