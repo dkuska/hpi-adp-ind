@@ -5,6 +5,7 @@ import os
 from typing import Optional
 from dacite import from_dict
 
+import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -43,66 +44,56 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, config: Glob
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> str:
     df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))   
     
+    plot_fname = f'stackedBarplot_{config.arity}_{config.now.year}{config.now.month:02d}{config.now.day:02d}_{config.now.hour:02d}{config.now.minute:02d}{config.now.second:02d}.jpg' 
+    barplot_path = create_TpFpFn_stacked_barplot(df, plot_folder, plot_fname)
+    
+    onionplot_path = create_onion_plot(df, plot_folder, config)
+
+    return "" # TODO:
+
+def create_TpFpFn_stacked_barplot(df: pd.DataFrame, plot_folder: str, plot_fname: str) -> str:
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 15))
     sns.despine(f)
     
-    df_method = df.groupby('sampling_method')
-    d = []
-    for method, frame in df_method:
-        for i in range(int(frame['tp'].mean())):
-            d.append([method,'tp', 1])
-        for i in range(int(frame['fp'].mean())):
-            d.append([method,'fp', 1])
-        # for i in range(int(frame['fn'].mean())):
-        #     d.append([method,'fn', 1])
-        
-    df_method = pd.DataFrame(d, columns=['method', 'type', 'count'])
-    sns.histplot(
-        df_method,
-        x='method',
-        hue='type',
-        hue_order=['tp', 'fp'],
-        multiple='stack',
-        ax=ax1,
-        linewidth=.3,
-    )
-    ax1.tick_params(axis='x', rotation=90)
-    ax1.tick_params(axis='x', labelsize=4)
-    ax1.set_xlabel("Sampling Mehods")
-    ax1.set_ylabel("Count")
-    
-    df_rate = df.groupby('sampling_rate')
-    d = []
-    for rate, frame in df_rate:
-        for i in range(int(frame['tp'].mean())):
-            d.append([rate,'tp', 1])
-        for i in range(int(frame['fp'].mean())):
-            d.append([rate,'fp', 1])
-        # for i in range(int(frame['fn'].mean())):
-        #     d.append([rate,'fn', 1])
-
-    df_rate = pd.DataFrame(d, columns=['rate', 'type', 'count'])
-    
-    sns.histplot(
-        df_rate,
-        x='rate',
-        hue='type',
-        hue_order=['tp', 'fp'],
-        multiple='stack',
-        ax=ax2,
-        linewidth=.3,
-    )
-    
-    ax2.tick_params(axis='x', rotation=90)
-    ax2.tick_params(axis='x', labelsize=4)
-    ax2.set_xlabel("Sampling Rates")
-    ax2.set_ylabel("Count")
-    
-    plot_fname = f'plots_{config.arity}_{config.now.year}{config.now.month:02d}{config.now.day:02d}_{config.now.hour:02d}{config.now.minute:02d}{config.now.second:02d}.jpg' 
+    ax1 = stacked_barplot_single_axis(axes = ax1, dataframe = df, groupby_attr = 'sampling_method')
+    ax2 = stacked_barplot_single_axis(axes = ax2, dataframe = df, groupby_attr = 'sampling_rate')
     
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
     return plot_path
+
+
+def stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
+    df_grouped = dataframe.groupby(groupby_attr)
+    d = []
+    for method, frame in df_grouped:
+        for _ in range(int(frame['tp'].mean())):
+            d.append([method,'tp', 1])
+        for _ in range(int(frame['fp'].mean())):
+            d.append([method,'fp', 1])
+        for _ in range(int(frame['fn'].mean())):
+            d.append([method,'fn', 1])
+        
+    df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'type', 'count'])
+    sns.histplot(
+        df_grouped,
+        x=groupby_attr,
+        hue='type',
+        hue_order=['tp', 'fp', 'fn'],
+        multiple='stack',
+        ax=axes,
+        linewidth=.3,
+    )
+    axes.tick_params(axis='x', rotation=90)
+    axes.tick_params(axis='x', labelsize=4)
+    axes.set_xlabel(f"{groupby_attr}")
+    axes.set_ylabel("Count")
+    
+    return axes
+
+
+def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration) -> str:
+    return ''
 
 
 def parse_args() -> argparse.Namespace:
