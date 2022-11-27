@@ -24,8 +24,8 @@ def load_experiment_information(json_file: str) -> MetanomeRunBatch:
         return batch
 
 
-def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, config: GlobalConfiguration) -> str:
-    output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
+def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folder: str) -> str:
+    output_path = os.path.join(os.getcwd(), output_folder, output_file)
     output_csv = f'{output_path}.csv'
 
     with open(output_csv, 'w') as csv_output:
@@ -129,7 +129,7 @@ def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Opt
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
     output_file = args.file.rsplit('/',1)[-1].rsplit('.', 1)[0]
     
-    csv_path = create_evaluation_csv(experiments, output_file, config)
+    csv_path = create_evaluation_csv(experiments, output_file, config.output_folder)
     if config.create_plots:
         plot_path = make_plots(output_file, config.plot_folder, config)
     match args.return_path:

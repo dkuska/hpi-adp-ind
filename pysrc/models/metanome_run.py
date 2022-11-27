@@ -186,6 +186,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     result = parse_results(output_fname + configuration.result_suffix, configuration.arity, configuration.results_folder, configuration.print_inds)
     return MetanomeRun(configuration=configuration, results=result)
 
+
 # For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
 def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
     tp, fp = 0, 0
@@ -208,6 +209,7 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
         precision, recall, f1 = 0, 0, 0
         
     return tp, fp, fn, precision, recall, f1
+
 
 # For nary INDs, this returns lists with counts for each arity
 def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
