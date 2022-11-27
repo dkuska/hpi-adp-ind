@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
+import numpy as np
+
 from pysrc.utils.enhanced_json_encoder import EnhancedJSONDecoder
 
 from ..configuration import GlobalConfiguration
@@ -41,11 +43,31 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folde
 
 
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> str:
+    arity = 'unary' if 'unary' in output_file else 'nary'
+    
     df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))   
     # Count how many files were in the source and how many were sampled
     num_files = len(df['sampled_files'].tolist()[0].split(';'))
     df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
     
+    if arity == 'nary':
+        df_copy = df.copy(deep=True)
+        # First seperate them
+        df = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
+                                 fp = lambda x: x['fp'].str.split('; '),
+                                 fn = lambda x: x['fn'].str.split('; '),
+                                 precision = lambda x: x['precision'].str.split('; '),
+                                 recall = lambda x: x['recall'].str.split('; '),
+                                 f1 = lambda x: x['f1'].str.split('; '))
+        df['tp']        = df['tp'].map(lambda x: sum([int(i) for i in x]))
+        df['fp']        = df['fp'].map(lambda x: sum([int(i) for i in x]))
+        df['fn']        = df['fn'].map(lambda x: sum([int(i) for i in x]))
+        df['precision'] = df['precision'].map(lambda x: sum([float(i) for i in x])/len(x))
+        df['recall']    = df['recall'].map(lambda x: sum([float(i) for i in x])/len(x))
+        df['f1']        = df['f1'].map(lambda x: sum([float(i) for i in x])/len(x))
+
+        onionplot_path = create_onion_plot(df_copy, plot_folder, config)
+        
     plot_fname = f'stackedBarPlots_{output_file}_detailed.jpg'
     groupby_attributes = ['sampling_rate', 'sampling_method']
     barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
@@ -53,10 +75,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
     plot_fname = f'stackedBarPlots_{output_file}_simplified.jpg'
     groupby_attributes = ['num_sampled_files']
     barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
-    
-    if config.arity == 'nary':
-        onionplot_path = create_onion_plot(df, plot_folder, config)
-
+        
     return barplot_path
 
 def create_TpFpFn_stacked_barplot(df: pd.DataFrame, groupby_attrs: list[str], plot_folder: str, plot_fname: str, figsize = (10,10)) -> str:
@@ -110,6 +129,7 @@ def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataf
 
 
 ## For n-ary INDs, create plots
+# TODO: IMPLEMENT
 def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration) -> str:
     return ''
 
