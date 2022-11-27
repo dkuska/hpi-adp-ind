@@ -52,7 +52,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
     
     if arity == 'nary':
         df_copy = df.copy(deep=True)
-        # First seperate them
+        # TODO: is there a way to make this prettier?.....
         df = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
                                  fp = lambda x: x['fp'].str.split('; '),
                                  fn = lambda x: x['fn'].str.split('; '),
@@ -68,13 +68,21 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
 
         onionplot_path = create_onion_plot(df_copy, plot_folder, config)
         
-    plot_fname = f'stackedBarPlots_{output_file}_detailed.jpg'
+    plot_fname = f'{output_file}_stackedBarPlots_detailed.jpg'
     groupby_attributes = ['sampling_rate', 'sampling_method']
     barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
     
-    plot_fname = f'stackedBarPlots_{output_file}_simplified.jpg'
+    plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'
     groupby_attributes = ['num_sampled_files']
     barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
+        
+    plot_fname = f'{output_file}_linePlots_detailed.jpg'    
+    groupby_attributes = ['sampling_rate', 'sampling_method']
+    barplot_path = create_PrecisionRecallF1_lineplot(df, groupby_attributes, plot_folder, plot_fname)
+    
+    plot_fname = f'{output_file}_linePlots_simplified.jpg' 
+    groupby_attributes = ['num_sampled_files']
+    barplot_path = create_PrecisionRecallF1_lineplot(df, groupby_attributes, plot_folder, plot_fname)
         
     return barplot_path
 
@@ -127,8 +135,45 @@ def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataf
     
     return axes
 
+def create_PrecisionRecallF1_lineplot(df: pd.DataFrame, groupby_attrs: list[str], plot_folder: str, plot_fname: str, figsize = [15,10]):
+    f, axes = plt.subplots(1, len(groupby_attrs), figsize=figsize)
+    
+    if len(groupby_attrs) > 1:
+        for ax, groupby_attr in zip(axes, groupby_attrs):
+            ax = create_PrecisionRecallF1_lineplot_single_axis(axes = ax, dataframe = df, groupby_attr = groupby_attr)
+    else:
+        axes = create_PrecisionRecallF1_lineplot_single_axis(axes = axes, dataframe = df, groupby_attr = groupby_attrs[0])
+    
+    plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
+    f.savefig(plot_path)
+    return plot_path
 
-## For n-ary INDs, create plots
+def create_PrecisionRecallF1_lineplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
+    df_grouped = dataframe.groupby(groupby_attr)
+    many_plots = False
+    if len(df_grouped) > 10:
+        many_plots = True
+    
+    d = []
+    for group_identifier, frame in df_grouped:
+        d.append([group_identifier, frame['precision'].mean(), frame['recall'].mean(), frame['f1'].mean()])            
+    df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'Precision', 'Recall', 'F1-Score']).set_index(groupby_attr)
+
+    sns.lineplot(
+        data=df_grouped,
+        ax=axes
+    )
+    if many_plots: # If there are too many entries, attempt to make it somewhat readable...
+        axes.tick_params(axis='x', rotation=90)
+        axes.tick_params(axis='x', labelsize=4)
+    axes.set_xlabel(f"{groupby_attr}")
+    axes.set_ylabel("Percentages")
+    
+    
+    return axes
+
+
+## For n-ary INDs, create plots showing TP,FP,FN per arity
 # TODO: IMPLEMENT
 def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration) -> str:
     return ''
