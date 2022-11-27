@@ -42,21 +42,33 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, config: Glob
 
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> str:
     df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))   
+    # Count how many files were in the source and how many were sampled
+    num_files = len(df['sampled_files'].tolist()[0].split(';'))
+    df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
     
-    plot_fname = f'stackedBarplot_{output_file}.jpg'
-    barplot_path = create_TpFpFn_stacked_barplot(df, plot_folder, plot_fname)
+    plot_fname = f'stackedBarPlots_{output_file}_detailed.jpg'
+    groupby_attributes = ['sampling_rate', 'sampling_method']
+    barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
+    
+    plot_fname = f'stackedBarPlots_{output_file}_simplified.jpg'
+    groupby_attributes = ['num_sampled_files']
+    barplot_path = create_TpFpFn_stacked_barplot(df, groupby_attributes, plot_folder, plot_fname)
     
     if config.arity == 'nary':
         onionplot_path = create_onion_plot(df, plot_folder, config)
 
     return barplot_path
 
-def create_TpFpFn_stacked_barplot(df: pd.DataFrame, plot_folder: str, plot_fname: str) -> str:
-    f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 15))
+def create_TpFpFn_stacked_barplot(df: pd.DataFrame, groupby_attrs: list[str], plot_folder: str, plot_fname: str, figsize = (10,10)) -> str:
+    
+    f, axes = plt.subplots(1, len(groupby_attrs), figsize=figsize)
     sns.despine(f)
     
-    ax1 = create_TpFpFn_stacked_barplot_single_axis(axes = ax1, dataframe = df, groupby_attr = 'sampling_method')
-    ax2 = create_TpFpFn_stacked_barplot_single_axis(axes = ax2, dataframe = df, groupby_attr = 'sampling_rate')
+    if len(groupby_attrs) > 1:
+        for ax, groupby_attr in zip(axes, groupby_attrs):
+            ax = create_TpFpFn_stacked_barplot_single_axis(axes = ax, dataframe = df, groupby_attr = groupby_attr)
+    else:
+        axes = create_TpFpFn_stacked_barplot_single_axis(axes = axes, dataframe = df, groupby_attr = groupby_attrs[0])
     
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
@@ -65,13 +77,13 @@ def create_TpFpFn_stacked_barplot(df: pd.DataFrame, plot_folder: str, plot_fname
 def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
     d = []
-    for method, frame in df_grouped:
+    for group_identifier, frame in df_grouped:
         for _ in range(int(frame['tp'].mean())):
-            d.append([method,'tp', 1])
+            d.append([group_identifier,'tp', 1])
         for _ in range(int(frame['fp'].mean())):
-            d.append([method,'fp', 1])
+            d.append([group_identifier,'fp', 1])
         for _ in range(int(frame['fn'].mean())):
-            d.append([method,'fn', 1])
+            d.append([group_identifier,'fn', 1])
         
     df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'type', 'count'])
     sns.histplot(
@@ -81,17 +93,18 @@ def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataf
         hue_order=['tp', 'fp', 'fn'],
         multiple='stack',
         ax=axes,
-        linewidth=.3,
+        discrete=True,
+        linewidth=.3
     )
     axes.tick_params(axis='x', rotation=90)
     axes.tick_params(axis='x', labelsize=4)
     axes.set_xlabel(f"{groupby_attr}")
-    axes.set_ylabel("Count")
+    axes.set_ylabel("IND Count")
     
     return axes
 
 
-## 
+## For n-ary INDs, create plots
 def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration) -> str:
     return ''
 
@@ -108,7 +121,7 @@ def parse_args() -> argparse.Namespace:
 def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Optional[str]:
     experiments: MetanomeRunBatch = load_experiment_information(json_file=args.file)
     
-    # 
+    # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
     output_file = args.file.rsplit('/',1)[-1].rsplit('.', 1)[0]
     
     csv_path = create_evaluation_csv(experiments, output_file, config)
