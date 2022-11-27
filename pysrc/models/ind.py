@@ -15,3 +15,6 @@ class IND:
 
     def __hash__(self) -> int:
         return hash((tuple(self.dependents), tuple(self.referenced)))
+    
+    def arity(self) -> int:
+        return 1 if len(self.dependents) == 1 else len(self.dependents)
