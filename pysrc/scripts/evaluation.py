@@ -40,30 +40,29 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, config: Glob
     return output_csv
 
 
-# TODO: Actually implement this
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> str:
     df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))   
     
-    plot_fname = f'stackedBarplot_{config.arity}_{config.now.year}{config.now.month:02d}{config.now.day:02d}_{config.now.hour:02d}{config.now.minute:02d}{config.now.second:02d}.jpg' 
+    plot_fname = f'stackedBarplot_{output_file}.jpg'
     barplot_path = create_TpFpFn_stacked_barplot(df, plot_folder, plot_fname)
     
-    onionplot_path = create_onion_plot(df, plot_folder, config)
+    if config.arity == 'nary':
+        onionplot_path = create_onion_plot(df, plot_folder, config)
 
-    return "" # TODO:
+    return barplot_path
 
 def create_TpFpFn_stacked_barplot(df: pd.DataFrame, plot_folder: str, plot_fname: str) -> str:
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 15))
     sns.despine(f)
     
-    ax1 = stacked_barplot_single_axis(axes = ax1, dataframe = df, groupby_attr = 'sampling_method')
-    ax2 = stacked_barplot_single_axis(axes = ax2, dataframe = df, groupby_attr = 'sampling_rate')
+    ax1 = create_TpFpFn_stacked_barplot_single_axis(axes = ax1, dataframe = df, groupby_attr = 'sampling_method')
+    ax2 = create_TpFpFn_stacked_barplot_single_axis(axes = ax2, dataframe = df, groupby_attr = 'sampling_rate')
     
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
     return plot_path
 
-
-def stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
+def create_TpFpFn_stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
     d = []
     for method, frame in df_grouped:
@@ -92,6 +91,7 @@ def stacked_barplot_single_axis(axes : matplotlib.axes.Axes, dataframe: pd.DataF
     return axes
 
 
+## 
 def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration) -> str:
     return ''
 
@@ -107,9 +107,13 @@ def parse_args() -> argparse.Namespace:
 
 def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Optional[str]:
     experiments: MetanomeRunBatch = load_experiment_information(json_file=args.file)
-    csv_path = create_evaluation_csv(experiments, config.output_file, config)
+    
+    # 
+    output_file = args.file.rsplit('/',1)[-1].rsplit('.', 1)[0]
+    
+    csv_path = create_evaluation_csv(experiments, output_file, config)
     if config.create_plots:
-        plot_path = make_plots(config.output_file, config.plot_folder, config)
+        plot_path = make_plots(output_file, config.plot_folder, config)
     match args.return_path:
         case 'csv':
             return csv_path
