@@ -5,6 +5,7 @@ import json
 import math
 import os
 import uuid
+import linecache
 
 from pysrc.configuration import GlobalConfiguration
 from pysrc.models.metanome_run import (MetanomeRun, MetanomeRunBatch,
@@ -93,8 +94,23 @@ def clean_results(results_folder: str) -> None:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
 def get_File_Combinations(samples):
+    data_type_dict = {}
+    for num_files in range(0, len(samples)):
+        for sam_file in range(0, len(num_files)):
+            if config.header:
+                particular_line = linecache.getline(samples[num_files][sam_file][0], 0)
+            else:
+                particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
+            dtype = type(particular_line)
+            data_type_dict[dtype].append((num_files, sam_file))
 
-    return None
+    data_type_tuples = []
+    for key in data_type_dict:
+        temp_list = []
+        for ele in range(0, len(data_type_dict[key])):
+            temp_list.append(samples[data_type_dict[key][ele][0]][data_type_dict[key][ele][1]])
+
+    return data_type_tuples
 
 
 def run_experiments(config: GlobalConfiguration) -> str:
