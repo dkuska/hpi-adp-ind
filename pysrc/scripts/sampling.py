@@ -7,7 +7,8 @@ import os
 import uuid
 
 from pysrc.configuration import GlobalConfiguration
-from pysrc.models.metanome_run import MetanomeRun, MetanomeRunBatch, MetanomeRunConfiguration, run_metanome
+from pysrc.models.metanome_run import (MetanomeRun, MetanomeRunBatch,
+                                   MetanomeRunConfiguration, run_metanome)
 from pysrc.sampling_methods import sampling_methods_dict
 from pysrc.utils.enhanced_json_encoder import EnhancedJSONEncoder
 from collections import defaultdict
@@ -91,6 +92,10 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
+def get_File_Combinations(samples):
+
+    return None
+
 
 def run_experiments(config: GlobalConfiguration) -> str:
     """Run experiments and return path to JSON"""
@@ -124,10 +129,38 @@ def run_experiments(config: GlobalConfiguration) -> str:
                 samples.extend([new_file_name])
 
 
+
     # Build cartesian product of all possible file combinations
     configurations: list[MetanomeRunConfiguration] = []
+    for baseline in itertools.product(*baselineset):
+        baseline: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
+        file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline)
+        configurations.append(MetanomeRunConfiguration(
+            arity=config.arity,
+            sampling_rates=used_sampling_rates,
+            sampling_methods=used_sampling_methods,
+            time=config.now,
+            source_dir=config.source_dir,
+            source_files=file_combination,
+            tmp_folder=config.tmp_folder,
+            results_folder=config.results_folder,
+            result_suffix=config.results_suffix,
+            output_folder=config.output_folder,
+            output_file=config.output_file,
+            clip_output=config.clip_output,
+            header=config.header,
+            print_inds=config.print_inds,
+            create_plots=config.create_plots,
+            is_baseline=' '.join(file_combination) == baseline_identifier
+
+        ))
+
+    #TODO change to clever sampling schema change the cartesian product
+    file_combinations_totest = get_File_Combinations(samples)
     for file_combination_setup in itertools.product(*samples):
-        file_combination: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
+        file_combination: list[str];
+        used_sampling_methods: list[str];
+        used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*file_combination_setup)
         configurations.append(MetanomeRunConfiguration(
             arity=config.arity,
