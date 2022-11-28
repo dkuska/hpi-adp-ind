@@ -2,7 +2,7 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional, Callable
+from typing import Optional, Callable, Dict
 from dacite import from_dict
 
 import matplotlib
@@ -86,7 +86,7 @@ def create_PrecisionRecallF1_lineplot(axes : matplotlib.axes.Axes, dataframe: pd
     d = []
     for group_identifier, frame in df_grouped:
         d.append([group_identifier, frame['precision'].mean(), frame['recall'].mean(), frame['f1'].mean()])            
-    df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'Precision', 'Recall', 'F1-Score']).set_index(groupby_attr)
+    df_grouped = pd.DataFrame(data=d, columns=[groupby_attr, 'Precision', 'Recall', 'F1-Score']).set_index(groupby_attr)
 
     sns.lineplot(data=df_grouped, ax=axes)
     
@@ -116,14 +116,40 @@ def create_plot(dataframe: pd.DataFrame, groupby_attrs: list[str], plot_method: 
 
 ## For n-ary INDs, create plots showing TP,FP,FN per arity
 # TODO: IMPLEMENT
-def create_onion_plot(df: pd.DataFrame, plot_folder: str, config: GlobalConfiguration, figsize=(10,10)) -> str:
-    f, axes = plt.subplots(figsize=figsize)
+def create_onion_plot(axes: matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> str:
+    df_grouped = dataframe.groupby(groupby_attr)
+    d = []
+    for group_identifier, frame in df_grouped:
+        print(group_identifier)
+        tp, fp, fn = frame['tp'].str.split('; '), frame['fp'].str.split('; '), frame['fn'].str.split('; ')
+        
+        tps: Dict[int, list[int]] = {}; fps: Dict[int, list[int]] = {}; fns: Dict[int, list[int]] = {}
+        avg_tps, avg_fps, avg_fns = {}, {}, {}
+        # Iterate over experiments for the level
+        for tp_i, fp_i, fn_i in zip(tp, fp, fn):
+            tp_i, fp_i, fn_i = [int(x) for x in tp_i], [int(x) for x in fp_i], [int(x) for x in fn_i]
+            # Iterate over the arity levels
+            for arity, (tp_ii, fp_ii, fn_ii) in enumerate(zip(tp_i, fp_i, fn_i)):
+                if arity not in tps: tps[arity] = []
+                if arity not in fps: fps[arity] = []
+                if arity not in fns: fns[arity] = []
+                tps[arity].append(tp_ii)
+                fps[arity].append(fp_ii)
+                fns[arity].append(fn_ii)
+            
+        # Keys for tps, fps and fns are the same, we can iterate over any of them    
+        for arity in tps.keys():
+            avg_tps[arity] = sum(tps[arity]) / len(tps[arity])
+            avg_fps[arity] = sum(fps[arity]) / len(fps[arity])
+            avg_fns[arity] = sum(fns[arity]) / len(fns[arity])
+            
+        for arity in avg_tps.keys():
+            d.append([group_identifier, arity, avg_tps[arity], avg_fps[arity], avg_fns[arity]])   
     
+    df = pd.DataFrame(d, columns=[groupby_attr, 'arity', 'avg_tp', 'avg_fp', 'avg_fn']).set_index(groupby_attr)
+    sns.barplot(data=df, axes=axes, x='arity', y='avg_tp', hue=df.index)
     
-    sns.barplot(data=df)
-    
-    
-    return ''
+    return axes
 
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> list[str]:
     plot_paths = []
@@ -136,7 +162,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
     df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
     
     if arity == 'nary':
-        df_copy = df.copy(deep=True)
+        df_original = df.copy(deep=True)
         # TODO: is there a way to make this prettier?.....
         df = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
                                  fp = lambda x: x['fp'].str.split('; '),
@@ -151,9 +177,12 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
         df['recall']    = df['recall'].map(lambda x: sum([float(i) for i in x])/len(x))
         df['f1']        = df['f1'].map(lambda x: sum([float(i) for i in x])/len(x))
 
-        onionplot_path = create_onion_plot(df_copy, plot_folder, config)
+        plot_fname = f'{output_file}_onionPlot.jpg'
+        groupby_attributes = ['num_sampled_files']
+        onionplot_path = create_plot(df_original, groupby_attributes, create_onion_plot, plot_folder, plot_fname)
+        plot_paths.append(onionplot_path)
         
-    groupby_attributes = ['sampling_rate', 'sampling_method']
+    groupby_attributes = ['num_sampled_files']
     plot_fname = f'{output_file}_stackedBarPlots_detailed.jpg'
     plot_path = create_plot(df, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
