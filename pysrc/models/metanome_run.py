@@ -126,6 +126,8 @@ class MetanomeRunBatch:
                 if isinstance(error, TuplesToRemove)
             ]
             # Consider whether a mean is appropriate here (also consider sum or other metrics)
+            # Also consider that unique tuples to be removed may overlap between INDs.
+            # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
             avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
             avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
             avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
