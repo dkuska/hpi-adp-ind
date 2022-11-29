@@ -187,6 +187,66 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     return MetanomeRun(configuration=configuration, results=result)
 
 
+# For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
+def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
+    tp, fp = 0, 0
+    num_inds = len(inds)
+
+    for ind in inds:
+        if baseline.has_ind(ind):
+        # if ind in baseline.inds:
+            tp += 1
+        else:
+            fp += 1
+
+    fn = len(baseline.inds) - tp
+
+    if num_inds > 0:
+        precision = tp / (tp + fp)
+        recall = tp / (tp + fn)    
+        f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
+    else:
+        precision, recall, f1 = 0, 0, 0
+        
+    return tp, fp, fn, precision, recall, f1
+
+
+# For nary INDs, this returns lists with counts for each arity
+def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
+    num_inds = len(inds)
+    
+    max_arity = max([ind.arity() for ind in baseline.inds])
+ 
+    tp, fp = [0 for _ in range(max_arity)], [0 for _ in range(max_arity)]
+    inds_per_arity = [0 for _ in range(max_arity)]
+    for ind in baseline.inds:
+        inds_per_arity[ind.arity() - 1] += 1
+    
+    for ind in inds:
+        arity = ind.arity() - 1 # -1 to match list indices  
+        if baseline.has_ind(ind):
+            tp[arity] += 1
+        else:
+            fp[arity] += 1
+    
+    fn = [inds_per_arity[arity] - tp[arity] for arity in range(max_arity)]
+    
+    precision, recall, f1 = [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)]
+    for i in range(max_arity):
+        if tp[i] + fp[i] > 0:
+            precision[i] = tp[i] / (tp[i] + fp[i])
+                                    
+        if tp[i] + fn[i] > 0:
+            recall[i] = tp[i] / (tp[i] + fn[i])
+                                 
+        if recall[i] + precision[i] > 0:
+            f1[i] = 2*(precision[i] * recall[i])/(precision[i] + recall[i])
+        else:
+            f1[i] = float('nan')       
+    
+    return tp, fp, fn, precision, recall, f1
+
+
 def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> list[str]:
     sampled_file_paths = run.configuration.source_files
     sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
@@ -211,24 +271,16 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         methods.append(sampling_method)
         rates.append(sampling_rate)
 
-    tp, fp = 0, 0
-    inds = run.results.inds
-    num_inds = len(inds)
-
-    for ind in inds:
-        if baseline.has_ind(ind):
-        # if ind in baseline.inds:
-            tp += 1
-        else:
-            fp += 1
-
-    fn = len(baseline.inds) - tp
-
-    if num_inds > 0:
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)    
-        f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
+    if run.configuration.arity == 'unary':
+        tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
     else:
-        precision, recall, f1 = 0, 0, 0
+        tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), \
+                '; '.join([str(tp_i) for tp_i in tp]), \
+                '; '.join([str(fp_i) for fp_i in fp]), \
+                '; '.join([str(fn_i) for fn_i in fn]), \
+                '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
+                '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
+                '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
 
-    return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
