@@ -109,10 +109,11 @@ class MetanomeRunBatch:
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
     
-    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float]]:
-        """Returns the average number (absolute & relative) of rows to remove such that false positive INDs become real"""
+    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float, float, float]]:
+        """Returns the average number (absolute & relative) of rows (total & unique) to remove such that false positive INDs become real
+        The form of a dict entry is (absolute_total, relative_total, absolute_distinct, relative_distinct)"""
         baseline = self.baseline
-        results: dict[MetanomeRun, tuple[float, float]] = {}
+        results: dict[MetanomeRun, tuple[float, float, float, float]] = {}
         for run in self.runs:
             tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
             run_results: dict[IND, list[ErrorMetric]] = {ind: ind.errors for ind in run.results.inds}
@@ -124,9 +125,11 @@ class MetanomeRunBatch:
                 in sublist
                 if isinstance(error, TuplesToRemove)
             ]
-            avg_abs = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_rel = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
-            results[run] = (avg_abs, avg_rel)
+            avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_uniq = statistics.fmean([error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
         return results
 
 

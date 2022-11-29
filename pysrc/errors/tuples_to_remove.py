@@ -14,7 +14,7 @@ def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration'
             continue
         # If we already know this is a TP, we don't have to check it (no tuples have to be removed)
         if next((error.ind_type for error in ind.errors if isinstance(error, INDType)), None) == 'TP':
-            result = TuplesToRemove(0, 0)
+            result = TuplesToRemove(0, 0, 0, 0)
             ind.errors.append(result)
             continue
         # Format: (file_path, column_name)
@@ -39,7 +39,11 @@ def tuples_to_remove(*, baseline_config: 'metanome_run.MetanomeRunConfiguration'
         dependent_data = data_from_files(dependent_files, file_contents)
         referenced_data = data_from_files(referenced_files, file_contents)
         dependent_entries_to_remove = check_tuple_pair(dependent_data=dependent_data, referenced_data=referenced_data)
-        result = TuplesToRemove(absolute_tuples_to_remove=dependent_entries_to_remove, relative_tuples_to_remove=dependent_entries_to_remove / len(dependent_data))
+        result = TuplesToRemove(
+            absolute_tuples_to_remove=dependent_entries_to_remove[0],
+            relative_tuples_to_remove=dependent_entries_to_remove[0] / len(dependent_data),
+            absolute_distinct_tuples_to_remove=dependent_entries_to_remove[1],
+            relative_distinct_tuples_to_remove=dependent_entries_to_remove[1] / dependent_entries_to_remove[2])
         ind.errors.append(result)
 
 
@@ -56,9 +60,10 @@ def data_from_files(files: list[tuple[str, str]], file_contents: dict[str, list[
     return data
 
 
-def check_tuple_pair(*, dependent_data: list[tuple[str, ...]], referenced_data: list[tuple[str, ...]]) -> int:
+def check_tuple_pair(*, dependent_data: list[tuple[str, ...]], referenced_data: list[tuple[str, ...]]) -> tuple[int, int, int]:
+    """Returns a tuple of (entries_to_remove, distinct_entries_to_remove, distinct_values_in_dependent_set)"""
     dependent_set = set(dependent_data)
     referenced_set = set(referenced_data)
     difference = dependent_set - referenced_set
-    return len([dependent for dependent in dependent_data if dependent != '' and dependent in difference])
+    return len([dependent for dependent in dependent_data if dependent != '' and dependent in difference]), len(difference), len(dependent_set)
             

@@ -110,7 +110,7 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
     if mode == 'interactive':
         print('### Tuples To Remove ###')
         print('When looking into the shown file combinations, on average that many tuples have to be removed to make all found INDs TPs.')
-        print('The data is presented as (absolute number of tuples to be removed, relative percentage of tuples to be removed).')
+        print('The data is presented as (absolute number of tuples to be removed, relative percentage of tuples to be removed, absolute number of distinct tuples to be removed, relative percentage of distinct tuples to be removed).')
         print({
             tuple([
                 file.rsplit('/', 1)[1]
