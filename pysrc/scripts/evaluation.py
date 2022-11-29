@@ -92,7 +92,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
         onionplot_path = create_plot(df_original, groupby_attributes, create_onion_plot, plot_folder, plot_fname)
         plot_paths.append(onionplot_path)
         
-    groupby_attributes = ['num_sampled_files']
+    groupby_attributes = ['sampling_method', 'sampling_rate']
     plot_fname = f'{output_file}_stackedBarPlots_detailed.jpg'
     plot_path = create_plot(df, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
