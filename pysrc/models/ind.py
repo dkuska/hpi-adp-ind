@@ -16,5 +16,6 @@ class IND:
     def __hash__(self) -> int:
         return hash((tuple(self.dependents), tuple(self.referenced)))
     
+    
     def arity(self) -> int:
         return len(self.dependents)
