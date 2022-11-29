@@ -17,4 +17,4 @@ class IND:
         return hash((tuple(self.dependents), tuple(self.referenced)))
     
     def arity(self) -> int:
-        return 1 if len(self.dependents) == 1 else len(self.dependents)
+        return len(self.dependents)

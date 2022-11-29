@@ -2,7 +2,7 @@ import argparse
 import csv
 import json
 import os
-from typing import Optional, Callable, Dict
+from typing import Optional, Callable
 from dacite import from_dict
 
 import matplotlib
@@ -44,9 +44,7 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folde
 
 def create_TpFpFn_stacked_barplot(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
-    many_plots = False
-    if len(df_grouped) > 10:
-        many_plots = True
+    many_plots = len(df_grouped) > 10
     
     d = []
     for group_identifier, frame in df_grouped:
@@ -115,7 +113,6 @@ def create_plot(dataframe: pd.DataFrame, groupby_attrs: list[str], plot_method: 
 
 
 ## For n-ary INDs, create plots showing TP,FP,FN per arity
-# TODO: IMPLEMENT
 def create_onion_plot(axes: matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> str:
     df_grouped = dataframe.groupby(groupby_attr)
     d = []
@@ -123,7 +120,7 @@ def create_onion_plot(axes: matplotlib.axes.Axes, dataframe: pd.DataFrame, group
         print(group_identifier)
         tp, fp, fn = frame['tp'].str.split('; '), frame['fp'].str.split('; '), frame['fn'].str.split('; ')
         
-        tps: Dict[int, list[int]] = {}; fps: Dict[int, list[int]] = {}; fns: Dict[int, list[int]] = {}
+        tps: dict[int, list[int]] = {}; fps: dict[int, list[int]] = {}; fns: dict[int, list[int]] = {}
         avg_tps, avg_fps, avg_fns = {}, {}, {}
         # Iterate over experiments for the level
         for tp_i, fp_i, fn_i in zip(tp, fp, fn):
