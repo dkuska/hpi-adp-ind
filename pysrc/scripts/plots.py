@@ -6,9 +6,7 @@ import pandas as pd
 
 def create_PrecisionRecallF1_lineplot(axes : matplotlib.axes.Axes, dataframe: pd.DataFrame, groupby_attr: str) -> matplotlib.axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
-    many_plots = False
-    if len(df_grouped) > 10:
-        many_plots = True
+    many_plots = len(df_grouped) > 10
     
     d = []
     for group_identifier, frame in df_grouped:
