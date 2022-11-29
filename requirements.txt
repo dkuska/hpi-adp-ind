@@ -1,4 +1,5 @@
 dacite
 mypy
 pandas
+matplotlib
 seaborn
