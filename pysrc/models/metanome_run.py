@@ -2,9 +2,12 @@ import datetime
 import json
 import os
 from dataclasses import dataclass
-from typing import Iterator, Optional
+import statistics
+from typing import Iterator
+from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
+from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove
 from pysrc.models.ind import IND
 
 
@@ -29,6 +32,10 @@ class MetanomeRunConfiguration:
     create_plots: bool
 
     is_baseline: bool
+
+    def __hash__(self) -> int:
+        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir, tuple(self.source_files), self.tmp_folder, self.results_folder,
+        self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
 
 
 @dataclass(frozen=True)
@@ -78,6 +85,9 @@ class MetanomeRunResults:
     def __iter__(self) -> Iterator[IND]:
         return self.inds.__iter__()
 
+    def __hash__(self) -> int:
+        return hash((tuple(self.inds)))
+
 
 @dataclass(frozen=True)
 class MetanomeRun:
@@ -98,6 +108,32 @@ class MetanomeRunBatch:
     @property
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
+    
+    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float, float, float]]:
+        """Returns the average number (absolute & relative) of rows (total & unique) to remove such that false positive INDs become real
+        The form of a dict entry is (absolute_total, relative_total, absolute_distinct, relative_distinct)"""
+        baseline = self.baseline
+        results: dict[MetanomeRun, tuple[float, float, float, float]] = {}
+        for run in self.runs:
+            tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
+            run_results: dict[IND, list[ErrorMetric]] = {ind: ind.errors for ind in run.results.inds}
+            tuples_to_remove_errors: list[TuplesToRemove] = [
+                error
+                for sublist
+                in run_results.values()
+                for error
+                in sublist
+                if isinstance(error, TuplesToRemove)
+            ]
+            # Consider whether a mean is appropriate here (also consider sum or other metrics)
+            # Also consider that unique tuples to be removed may overlap between INDs.
+            # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
+            avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_uniq = statistics.fmean([error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
+        return results
 
 
 def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool) -> MetanomeRunResults:
@@ -194,9 +230,10 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
 
     for ind in inds:
         if baseline.has_ind(ind):
-        # if ind in baseline.inds:
+            ind.errors.append(INDType('TP'))
             tp += 1
         else:
+            ind.errors.append(INDType('FP'))
             fp += 1
 
     fn = len(baseline.inds) - tp
@@ -225,8 +262,10 @@ def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
     for ind in inds:
         arity = ind.arity() - 1 # -1 to match list indices  
         if baseline.has_ind(ind):
+            ind.errors.append(INDType('TP'))
             tp[arity] += 1
         else:
+            ind.errors.append(INDType('FP'))
             fp[arity] += 1
     
     fn = [inds_per_arity[arity] - tp[arity] for arity in range(max_arity)]
