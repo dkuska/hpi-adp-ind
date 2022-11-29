@@ -5,14 +5,16 @@ import json
 import math
 import os
 import uuid
+import re
 import linecache
 
-from pysrc.configuration import GlobalConfiguration
-from pysrc.models.metanome_run import (MetanomeRun, MetanomeRunBatch,
-                                   MetanomeRunConfiguration, run_metanome)
-from pysrc.sampling_methods import sampling_methods_dict
-from pysrc.utils.enhanced_json_encoder import EnhancedJSONEncoder
 from collections import defaultdict
+from ..configuration import GlobalConfiguration
+from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
+                                   MetanomeRunConfiguration, run_metanome)
+from ..sampling_methods import sampling_methods_dict
+from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
+
 
 def sample_csv(file_path: str,
                sampling_method: str,
@@ -96,19 +98,30 @@ def clean_results(results_folder: str) -> None:
 def get_File_Combinations(samples):
     data_type_dict = {}
     for num_files in range(0, len(samples)):
-        for sam_file in range(0, len(num_files)):
-            if config.header:
-                particular_line = linecache.getline(samples[num_files][sam_file][0], 0)
+        for sam_file in range(0, len(samples[num_files])):
+            #if config.header:
+            #    particular_line = linecache.getline(samples[num_files][sam_file][0], 0)
+            #else:
+            particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
+            particular_line = particular_line.split('\n')
+            if re.fullmatch(r'^[\d]+\.[\d]+', particular_line[0]):
+                dtype = "float"
+            elif  re.fullmatch(r'^[\d]+', particular_line[0]):
+                dtype = "int"
             else:
-                particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
-            dtype = type(particular_line)
-            data_type_dict[dtype].append((num_files, sam_file))
+                dtype = "string"
+
+            if dtype in data_type_dict.keys():
+                data_type_dict[dtype].append((num_files, sam_file))
+            else:
+                data_type_dict[dtype] = [(num_files, sam_file)]
 
     data_type_tuples = []
     for key in data_type_dict:
         temp_list = []
         for ele in range(0, len(data_type_dict[key])):
             temp_list.append(samples[data_type_dict[key][ele][0]][data_type_dict[key][ele][1]])
+        data_type_tuples.append(temp_list)
 
     return data_type_tuples
 
@@ -173,7 +186,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
 
     #TODO change to clever sampling schema change the cartesian product
     file_combinations_totest = get_File_Combinations(samples)
-    for file_combination_setup in itertools.product(*samples):
+    for file_combination_setup in file_combinations_totest:
         file_combination: list[str];
         used_sampling_methods: list[str];
         used_sampling_rates: list[float]
