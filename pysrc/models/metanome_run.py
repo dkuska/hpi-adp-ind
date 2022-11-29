@@ -125,6 +125,7 @@ class MetanomeRunBatch:
                 in sublist
                 if isinstance(error, TuplesToRemove)
             ]
+            # Consider whether a mean is appropriate here (also consider sum or other metrics)
             avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
             avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
             avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
