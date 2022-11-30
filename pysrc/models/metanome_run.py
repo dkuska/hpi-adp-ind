@@ -63,7 +63,7 @@ class MetanomeRunBatch:
         return next(run for run in self.runs if run.configuration.is_baseline)
 
 
-def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -75,7 +75,8 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
     for line in lines:
         line_json = json.loads(line)
-        if arity == 'unary':
+        #TODO make decision based on baseline case add another parameter to method what does it do exactly???
+        if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
             dependant_column = dependant_raw['columnIdentifier']
@@ -89,7 +90,22 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced])
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
-        elif arity == 'nary':
+        elif arity == 'unary' and is_baseline == False:
+            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+
+            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+
+            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+            ind = IND(dependents=[dependant], referenced=[referenced])
+            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+
+        elif arity == 'nary' and is_baseline == True:
             dependant_list: list[ColumnInformation] = []
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
@@ -104,6 +120,28 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
                 referenced_column = referenced_entry['columnIdentifier']
+                referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                referenced_list.append(referenced)
+
+            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+            ind = IND(dependents=dependant_list, referenced=referenced_list)
+
+        elif arity == 'nary' and is_baseline == False:
+            dependant_list: list[ColumnInformation] = []
+            dependant_raw = line_json['dependant']['columnIdentifiers']
+            for dependant_entry in dependant_raw:
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                dependant_list.append(dependant)
+
+            referenced_list: list[ColumnInformation] = []
+            referenced_raw = line_json['referenced']['columnIdentifiers']
+            for referenced_entry in referenced_raw:
+                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+                referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
@@ -143,9 +181,11 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
     # Run
+    print(execute_str)
     os.system(execute_str)
     # Parse
-    result = parse_results(output_fname + configuration.result_suffix, configuration.arity, configuration.results_folder, configuration.print_inds)
+    result = parse_results(output_fname + configuration.result_suffix, configuration.arity,
+                           configuration.results_folder, configuration.print_inds, configuration.is_baseline)
     return MetanomeRun(configuration=configuration, results=result)
 
 
@@ -156,8 +196,8 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     file_names, methods, rates = [],[],[]
     for sampled_file in sampled_file_names:
         split_filename = sampled_file.split('_')
-        if len(split_filename) == 3:
-            fname, sampling_rate, sampling_method = split_filename
+        if len(split_filename) == 4:
+            fname, sampling_rate, sampling_method, org_row = split_filename
             sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
             fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'

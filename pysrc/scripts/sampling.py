@@ -31,7 +31,7 @@ def sample_csv(file_path: str,
 
     with open(file_path, 'r') as f:
         #TODO Input abhängig machen, was passiert mit Headern
-        reader = csv.reader(f, delimiter=';', quotechar='"', escapechar='\\')
+        reader = csv.reader(f, delimiter=';', escapechar='\\')
         for row in reader:
             for i in range(len(row)):
                 columns[i].append(row[i])
@@ -46,7 +46,7 @@ def sample_csv(file_path: str,
         num_samples = math.ceil(num_entries * sampling_rate)
 
         #rename files column specific
-        new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}_{col}.csv'
+        new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}_{col+1}.csv'
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
@@ -56,8 +56,8 @@ def sample_csv(file_path: str,
             writer = csv.writer(file)
             if config.header:
                 writer.writerow()
-
-            writer.writerows((item,) for item in data)
+            data = [[item] for item in data]
+            writer.writerows(data)
         out_tuple = [(new_file_path, sampling_method, sampling_rate)]
         samples.extend(out_tuple)
 
@@ -81,7 +81,6 @@ def create_result_json(runs: MetanomeRunBatch,
 
 
 def clean_tmp_csv(tmp_folder: str) -> None:
-    print(tmp_folder)
     csv_files = [
         f
         for f in os.listdir(tmp_folder)
@@ -95,14 +94,15 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-def get_File_Combinations(samples):
+def get_File_Combinations(samples, config):
     data_type_dict = {}
     for num_files in range(0, len(samples)):
         for sam_file in range(0, len(samples[num_files])):
-            #if config.header:
-            #    particular_line = linecache.getline(samples[num_files][sam_file][0], 0)
-            #else:
-            particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
+            if config.header:
+                particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
+            else:
+                #TODO Get Next Lines if it was empty
+                particular_line = linecache.getline(samples[num_files][sam_file][0], 2)
             particular_line = particular_line.split('\n')
             if re.fullmatch(r'^[\d]+\.[\d]+', particular_line[0]):
                 dtype = "float"
@@ -185,7 +185,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
         ))
 
     #TODO change to clever sampling schema change the cartesian product
-    file_combinations_totest = get_File_Combinations(samples)
+    file_combinations_totest = get_File_Combinations(samples, config)
     for file_combination_setup in file_combinations_totest:
         file_combination: list[str];
         used_sampling_methods: list[str];
