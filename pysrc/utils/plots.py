@@ -1,10 +1,11 @@
 import os
+from typing import Callable
 
-import seaborn as sns
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
-from typing import Callable
+import seaborn as sns
+
 
 def create_plot(dataframe: pd.DataFrame, groupby_attrs: list[str], plot_method: Callable, plot_folder: str, plot_fname: str, figsize = (15,10)):
     f, axes = plt.subplots(1, len(groupby_attrs), figsize=figsize)

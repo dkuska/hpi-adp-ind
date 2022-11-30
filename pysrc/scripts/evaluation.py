@@ -2,23 +2,24 @@ import argparse
 import csv
 import json
 import os
-from typing import Literal, Optional, Callable
-from dacite import from_dict
+from typing import Callable, Literal, Optional
 
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
+from dacite import from_dict
 
-import numpy as np
-
-from pysrc.utils.enhanced_json_encoder import EnhancedJSONDecoder, EnhancedJSONEncoder
+from pysrc.utils.enhanced_json_encoder import (EnhancedJSONDecoder,
+                                               EnhancedJSONEncoder)
 
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    run_as_compared_csv_line)
-
-from ..utils.plots import create_plot, create_onion_plot, create_TpFpFn_stacked_barplot, create_PrecisionRecallF1_lineplot
+from ..utils.plots import (create_onion_plot, create_plot,
+                           create_PrecisionRecallF1_lineplot,
+                           create_TpFpFn_stacked_barplot)
 
 
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
