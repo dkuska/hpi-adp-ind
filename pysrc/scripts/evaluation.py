@@ -18,7 +18,7 @@ from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    run_as_compared_csv_line)
 
-from .plots import create_onion_plot, create_TpFpFn_stacked_barplot, create_PrecisionRecallF1_lineplot
+from ..utils.plots import create_onion_plot, create_TpFpFn_stacked_barplot, create_PrecisionRecallF1_lineplot
 
 
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
