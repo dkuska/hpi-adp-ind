@@ -1,8 +1,11 @@
-import os, csv
-import pandas as pd
-import numpy as np
+""" This file is NOT USED currently. """
 
-mode = ['sampling', 'describe'][1]
+import csv
+import os
+
+import numpy as np
+import pandas as pd
+
 source_dir = 'src/'
 
 
@@ -55,5 +58,4 @@ def describe_src_files():
         csv_description(src_file)
         
 if __name__ == "__main__":
-    if mode == 'describe':
-        describe_src_files()
+    describe_src_files()
