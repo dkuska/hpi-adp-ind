@@ -45,20 +45,17 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folde
     return output_csv
 
 
-def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> list[str]:
-    plot_paths = []
-    
-    arity = 'unary' if 'unary' in output_file else 'nary'
-    
-    df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))   
+def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) -> tuple[pd.DataFrame, Optional[pd.DataFrame]]:
+    """After loading the data from the evaluation csv, some preprocessing needs to be done, before we can create plots
+    """
     # Count how many files were in the source and how many were sampled
     num_files = len(df['sampled_files'].tolist()[0].split(';'))
     df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
     
     if arity == 'nary':
-        df_original = df.copy(deep=True)
+        df_nary = df.copy(deep=True)
         # TODO: is there a way to make this prettier?.....
-        df = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
+        df_unary = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
                                  fp = lambda x: x['fp'].str.split('; '),
                                  fn = lambda x: x['fn'].str.split('; '),
                                  precision = lambda x: x['precision'].str.split('; '),
@@ -70,28 +67,44 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
         df['precision'] = df['precision'].map(lambda x: sum([float(i) for i in x])/len(x))
         df['recall']    = df['recall'].map(lambda x: sum([float(i) for i in x])/len(x))
         df['f1']        = df['f1'].map(lambda x: sum([float(i) for i in x])/len(x))
+        
+        return df_unary, df_nary
+    else:
+        return df, None
 
+
+def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> list[str]:
+    plot_paths = []
+    
+    arity = 'unary' if 'unary' in output_file else 'nary'
+    
+    df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))
+       
+    # Preprocessing of DataFrames, df_nary is None if arity == 'unary'
+    df_original, df_nary = plotting_preprocessing_evaluation_dataframe(df, arity)
+    
+    if arity == 'nary':
         plot_fname = f'{output_file}_onionPlot.jpg'
         groupby_attributes = ['num_sampled_files']
-        onionplot_path = create_plot(df_original, groupby_attributes, create_onion_plot, plot_folder, plot_fname)
+        onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_folder, plot_fname)
         plot_paths.append(onionplot_path)
         
     groupby_attributes = ['sampling_method', 'sampling_rate']
     plot_fname = f'{output_file}_stackedBarPlots_detailed.jpg'
-    plot_path = create_plot(df, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
+    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
     
     plot_fname = f'{output_file}_linePlots_detailed.jpg' 
-    plot_path = create_plot(df, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
+    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
     
     groupby_attributes = ['num_sampled_files']
     plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'
-    plot_path = create_plot(df, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
+    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
     
     plot_fname = f'{output_file}_linePlots_simplified.jpg' 
-    plot_path = create_plot(df, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
+    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
     plot_paths.append(plot_path)
     
     return plot_paths
