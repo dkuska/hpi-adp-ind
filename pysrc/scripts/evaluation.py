@@ -18,7 +18,7 @@ from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    run_as_compared_csv_line)
 
-from ..utils.plots import create_onion_plot, create_TpFpFn_stacked_barplot, create_PrecisionRecallF1_lineplot
+from ..utils.plots import create_plot, create_onion_plot, create_TpFpFn_stacked_barplot, create_PrecisionRecallF1_lineplot
 
 
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
@@ -42,21 +42,6 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folde
             writer.writerow(run_as_compared_csv_line(run, baseline.results))
     
     return output_csv
-
-
-def create_plot(dataframe: pd.DataFrame, groupby_attrs: list[str], plot_method: Callable, plot_folder: str, plot_fname: str, figsize = (15,10)):
-    f, axes = plt.subplots(1, len(groupby_attrs), figsize=figsize)
-    sns.despine(f)
-    
-    if len(groupby_attrs) > 1:
-        for ax, groupby_attr in zip(axes, groupby_attrs):
-            ax = plot_method(axes = ax, dataframe = dataframe, groupby_attr = groupby_attr)
-    else:
-        axes = plot_method(axes = axes, dataframe = dataframe, groupby_attr = groupby_attrs[0])
-    
-    plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
-    f.savefig(plot_path)
-    return plot_path
 
 
 def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> list[str]:
