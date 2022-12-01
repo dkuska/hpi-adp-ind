@@ -27,8 +27,8 @@ def sample_csv(file_path: str,
     samples: list[list[tuple[str, str, float]]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
-    #Innitializes the dict with value for no key present Datatype will be [int, list[str]]
-    aggregate_data_per_column = defaultdict(list)
+    #Innitializes the dict with value for no key present
+    aggregate_data_per_column: [int, list[str]] = defaultdict(list)
 
     with open(file_path, 'r') as f:
         reader = csv.reader(f, delimiter=';', escapechar='\\')
@@ -98,7 +98,8 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-def get_file_combinations(samples: list[list[list[str]]], config: GlobalConfiguration) -> list[list[list[str]]]:
+def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
+        -> list[list[tuple[str, str, float]]]:
     data_type_dict = {}
     for num_files_index in range(0, len(samples)):
         for sample_file_index in range(0, len(samples[num_files_index])):
