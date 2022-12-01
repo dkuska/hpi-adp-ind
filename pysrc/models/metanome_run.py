@@ -75,7 +75,6 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
     for line in lines:
         line_json = json.loads(line)
-        #TODO make decision based on baseline case add another parameter to method what does it do exactly???
         if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
@@ -90,6 +89,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced])
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
@@ -181,7 +181,6 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
     # Run
-    print(execute_str)
     os.system(execute_str)
     # Parse
     result = parse_results(output_fname + configuration.result_suffix, configuration.arity,

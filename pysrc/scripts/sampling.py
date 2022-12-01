@@ -5,8 +5,8 @@ import json
 import math
 import os
 import uuid
-import re
-import linecache
+import pandas as pd
+import numpy as np
 
 from collections import defaultdict
 from ..configuration import GlobalConfiguration
@@ -19,7 +19,7 @@ from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
-               config: GlobalConfiguration) -> str:
+               config: GlobalConfiguration) -> list[list[tuple[str, str, float]]]:
     """Sample a single file with a certain method and rate
     and create a new tmp file. Returns the path to the sampled file.
     """
@@ -27,39 +27,43 @@ def sample_csv(file_path: str,
     samples: list[list[tuple[str, str, float]]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
-    columns = defaultdict(list)
+    #Innitializes the dict with value for no key present Datatype will be [int, list[str]]
+    aggregate_data_per_column = defaultdict(list)
 
     with open(file_path, 'r') as f:
-        #TODO Input abhängig machen, was passiert mit Headern
         reader = csv.reader(f, delimiter=';', escapechar='\\')
         for row in reader:
             for i in range(len(row)):
-                columns[i].append(row[i])
+                #aggregates the data per line while reading file line by line
+                aggregate_data_per_column[i].append(row[i])
 
-    for col in columns:
+    for column in aggregate_data_per_column:
 
         if config.header:
-            file_header = columns[col][0]
-            data = columns[col][1:]
+            file_header = aggregate_data_per_column[column][0]
+            data = aggregate_data_per_column[column][1:]
 
-        num_entries = len(columns[col])
+        num_entries = len(aggregate_data_per_column[column])
         num_samples = math.ceil(num_entries * sampling_rate)
 
         #rename files column specific
-        new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}_{col+1}.csv'
+        new_file_name = f'{file_prefix}_{str(sampling_rate).replace(".", "")}_{sampling_method}_{column+1}.csv'
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
-        data = sampling_method_function(columns[col], num_samples, num_entries)
+        sampled_data = sampling_method_function([aggregate_data_per_column[column]], num_samples, num_entries)
 
         with open(new_file_path, 'w') as file:
-            writer = csv.writer(file)
+            writer = csv.writer(file, delimiter=',', escapechar='\\')
             if config.header:
-                writer.writerow()
-            data = [[item] for item in data]
-            writer.writerows(data)
-        out_tuple = [(new_file_path, sampling_method, sampling_rate)]
-        samples.extend(out_tuple)
+                writer.writerow([file_header])
+
+            #Changed for better readability
+            for out_row in sampled_data:
+                writer.writerow([out_row])
+
+        out_tuple = (new_file_path, sampling_method, sampling_rate)
+        samples.append(out_tuple)
 
     return samples
 
@@ -94,36 +98,39 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-def get_File_Combinations(samples, config):
+def get_file_combinations(samples: list[list[list[str]]], config: GlobalConfiguration) -> list[list[list[str]]]:
     data_type_dict = {}
-    for num_files in range(0, len(samples)):
-        for sam_file in range(0, len(samples[num_files])):
-            if config.header:
-                particular_line = linecache.getline(samples[num_files][sam_file][0], 1)
+    for num_files_index in range(0, len(samples)):
+        for sample_file_index in range(0, len(samples[num_files_index])):
+
+            current_tuple = samples[num_files_index][sample_file_index]
+            path_to_data = current_tuple[0]
+            #TODO add handling of headers in files
+            df = pd.read_csv(path_to_data, sep=';', header=None, on_bad_lines='skip')
+            numeric_columns = df.select_dtypes(include=np.number).columns.tolist()
+            categorical_columns = df.select_dtypes(include='object').columns.tolist()
+
+            if len(numeric_columns) == 1:
+                dtype = "number"
+            elif len(categorical_columns) == 1:
+                dtype = "object"
             else:
-                #TODO Get Next Lines if it was empty
-                particular_line = linecache.getline(samples[num_files][sam_file][0], 2)
-            particular_line = particular_line.split('\n')
-            if re.fullmatch(r'^[\d]+\.[\d]+', particular_line[0]):
-                dtype = "float"
-            elif  re.fullmatch(r'^[\d]+', particular_line[0]):
-                dtype = "int"
-            else:
-                dtype = "string"
+                dtype = "other"
 
             if dtype in data_type_dict.keys():
-                data_type_dict[dtype].append((num_files, sam_file))
+                data_type_dict[dtype].append((num_files_index, sample_file_index))
             else:
-                data_type_dict[dtype] = [(num_files, sam_file)]
+                data_type_dict[dtype] = [(num_files_index, sample_file_index)]
 
-    data_type_tuples = []
+    datatype_tuples = []
     for key in data_type_dict:
         temp_list = []
         for ele in range(0, len(data_type_dict[key])):
             temp_list.append(samples[data_type_dict[key][ele][0]][data_type_dict[key][ele][1]])
-        data_type_tuples.append(temp_list)
+        #TODO create from temp_list a tuple of tuples
+        datatype_tuples.append(temp_list)
 
-    return data_type_tuples
+    return datatype_tuples
 
 
 def run_experiments(config: GlobalConfiguration) -> str:
@@ -139,7 +146,6 @@ def run_experiments(config: GlobalConfiguration) -> str:
         if f.rsplit('.')[1] == 'csv'
     ]
     baseline_identifier = ' '.join(source_files)
-    #TODO replace sample with baseline ind
     #Find clever way for column based sampling
     baselineset: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]
@@ -154,16 +160,16 @@ def run_experiments(config: GlobalConfiguration) -> str:
         for sampling_method in config.sampling_methods:
             for sampling_rate in config.sampling_rates:
                 # Sample
-                new_file_name = sample_csv(file_path, sampling_method, sampling_rate, config)
-                samples.extend([new_file_name])
+                new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
+                samples.append(new_file_list)
 
 
 
     # Build cartesian product of all possible file combinations
     configurations: list[MetanomeRunConfiguration] = []
-    for baseline in itertools.product(*baselineset):
+    for baseline_tuple in itertools.product(*baselineset):
         baseline: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
-        file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline)
+        file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline_tuple)
         configurations.append(MetanomeRunConfiguration(
             arity=config.arity,
             sampling_rates=used_sampling_rates,
@@ -185,8 +191,8 @@ def run_experiments(config: GlobalConfiguration) -> str:
         ))
 
     #TODO change to clever sampling schema change the cartesian product
-    file_combinations_totest = get_File_Combinations(samples, config)
-    for file_combination_setup in file_combinations_totest:
+    file_combinations_to_test = get_file_combinations(samples, config)
+    for file_combination_setup in file_combinations_to_test:
         file_combination: list[str];
         used_sampling_methods: list[str];
         used_sampling_rates: list[float]
