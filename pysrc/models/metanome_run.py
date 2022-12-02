@@ -128,7 +128,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             ind = IND(dependents=dependant_list, referenced=referenced_list)
 
         elif arity == 'nary' and is_baseline == False:
-            dependant_list: list[ColumnInformation] = []
+            dependant_list = []
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
@@ -137,7 +137,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
                 # dependant_list.append(f'{dependant_table}.{dependant_column}')
                 dependant_list.append(dependant)
 
-            referenced_list: list[ColumnInformation] = []
+            referenced_list = []
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]

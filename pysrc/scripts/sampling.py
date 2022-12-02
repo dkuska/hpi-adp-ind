@@ -27,7 +27,7 @@ def sample_csv(file_path: str,
     samples: list[list[tuple[str, str, float]]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
-    #Innitializes the dict with value for no key present
+    # Initializes the dict with value for no key present
     aggregate_data_per_column: [int, list[str]] = defaultdict(list)
 
     with open(file_path, 'r') as f:
