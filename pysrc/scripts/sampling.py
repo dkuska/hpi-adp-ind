@@ -28,7 +28,7 @@ def sample_csv(file_path: str,
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
-    aggregate_data_per_column: [int, list[str]] = defaultdict(list)
+    aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
     with open(file_path, 'r') as f:
         reader = csv.reader(f, delimiter=';', escapechar='\\')
@@ -169,7 +169,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
     # Build cartesian product of all possible file combinations
     configurations: list[MetanomeRunConfiguration] = []
     for baseline_tuple in itertools.product(*baselineset):
-        baseline: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
+        file_combination: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline_tuple)
         configurations.append(MetanomeRunConfiguration(
             arity=config.arity,
