@@ -165,12 +165,12 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
             dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
 
             referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
             referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
@@ -204,7 +204,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             dependant_list = []
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
-                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
                 dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
                 # dependant_list.append(f'{dependant_table}.{dependant_column}')
@@ -213,7 +213,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             referenced_list = []
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
-                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_', 1)[0]
+                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
                 referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 # referenced_list.append(f'{referenced_table}.{referenced_column}')
