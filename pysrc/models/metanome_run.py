@@ -284,45 +284,45 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
         f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
     else:
         precision, recall, f1 = 0, 0, 0
-
+        
     return tp, fp, fn, precision, recall, f1
 
 
 # For nary INDs, this returns lists with counts for each arity
 def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
     num_inds = len(inds)
-
+    
     max_arity = max([ind.arity() for ind in baseline.inds])
-
+ 
     tp, fp = [0 for _ in range(max_arity)], [0 for _ in range(max_arity)]
     inds_per_arity = [0 for _ in range(max_arity)]
     for ind in baseline.inds:
         inds_per_arity[ind.arity() - 1] += 1
-
+    
     for ind in inds:
-        arity = ind.arity() - 1 # -1 to match list indices
+        arity = ind.arity() - 1 # -1 to match list indices  
         if baseline.has_ind(ind):
             ind.errors.append(INDType('TP'))
             tp[arity] += 1
         else:
             ind.errors.append(INDType('FP'))
             fp[arity] += 1
-
+    
     fn = [inds_per_arity[arity] - tp[arity] for arity in range(max_arity)]
-
+    
     precision, recall, f1 = [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)]
     for i in range(max_arity):
         if tp[i] + fp[i] > 0:
             precision[i] = tp[i] / (tp[i] + fp[i])
-
+                                    
         if tp[i] + fn[i] > 0:
             recall[i] = tp[i] / (tp[i] + fn[i])
-
+                                 
         if recall[i] + precision[i] > 0:
             f1[i] = 2*(precision[i] * recall[i])/(precision[i] + recall[i])
         else:
-            f1[i] = float('nan')
-
+            f1[i] = float('nan')       
+    
     return tp, fp, fn, precision, recall, f1
 
 

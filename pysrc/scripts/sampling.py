@@ -12,8 +12,8 @@ from collections import defaultdict
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    MetanomeRunConfiguration, run_metanome)
-from ..sampling_methods import sampling_methods_dict
 from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
+from ..utils.sampling_methods import sampling_methods_dict
 
 
 
