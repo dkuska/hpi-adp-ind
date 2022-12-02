@@ -19,12 +19,13 @@ from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
-               config: GlobalConfiguration) -> list[list[tuple[str, str, float]]]:
-    """Sample a single file with a certain method and rate
-    and create a new tmp file. Returns the path to the sampled file.
+               config: GlobalConfiguration) -> list[tuple[str, str, float]]:
+    """Sample every single column of file seperately with a certain method and rate
+    and create a new tmp file for every column. Returns a list of tuples including
+    the path, rate, method of the  column of the sampled file.
     """
 
-    samples: list[list[tuple[str, str, float]]] = []
+    samples: list[tuple[str, str, float]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
@@ -54,7 +55,7 @@ def sample_csv(file_path: str,
         sampled_data = sampling_method_function([aggregate_data_per_column[column]], num_samples, num_entries)
 
         with open(new_file_path, 'w') as file:
-            writer = csv.writer(file, delimiter=',', escapechar='\\')
+            writer = csv.writer(file, delimiter=';', escapechar='\\')
             if config.header:
                 writer.writerow([file_header])
 
@@ -98,9 +99,9 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
-        -> list[list[tuple[str, str, float]]]:
-    data_type_dict = {}
+def get_file_combinations(samples: list[tuple[str, str, float]], config: GlobalConfiguration) \
+        -> list[tuple[str, str, float]]:
+    data_type_dict: dict[int, list[str]] = {}
     for num_files_index in range(0, len(samples)):
         for sample_file_index in range(0, len(samples[num_files_index])):
 
@@ -128,7 +129,7 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
         temp_list = []
         for ele in range(0, len(data_type_dict[key])):
             temp_list.append(samples[data_type_dict[key][ele][0]][data_type_dict[key][ele][1]])
-        #TODO create from temp_list a tuple of tuples
+
         datatype_tuples.append(temp_list)
 
     return datatype_tuples
@@ -154,7 +155,6 @@ def run_experiments(config: GlobalConfiguration) -> str:
         in source_files
     ]
 
-    # TODO new execution arm for the sampled data with new sample list. Create Function to give valuable Combinations
     # Sample each source file
     samples = []
     for i, file_path in enumerate(source_files):
@@ -187,11 +187,11 @@ def run_experiments(config: GlobalConfiguration) -> str:
             header=config.header,
             print_inds=config.print_inds,
             create_plots=config.create_plots,
-            is_baseline=' '.join(file_combination) == baseline_identifier
+            is_baseline=True
 
         ))
 
-    #TODO change to clever sampling schema change the cartesian product
+    #TODO change to clever sampling schema
     file_combinations_to_test = get_file_combinations(samples, config)
     for file_combination_setup in file_combinations_to_test:
         file_combination: list[str];
@@ -214,7 +214,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
             header=config.header,
             print_inds=config.print_inds,
             create_plots=config.create_plots,
-            is_baseline=' '.join(file_combination) == baseline_identifier
+            is_baseline=False
         ))
     
     # And run experiment for each
