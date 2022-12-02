@@ -98,9 +98,9 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-def get_file_combinations(samples: list[tuple[str, str, float]], config: GlobalConfiguration) \
-        -> list[tuple[str, str, float]]:
-    data_type_dict: dict[int, list[str]] = {}
+def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
+        -> list[list[tuple[str, str, float]]]:
+    data_type_dict: dict[str, list[tuple[int, int]]] = {}
     for num_files_index in range(0, len(samples)):
         for sample_file_index in range(0, len(samples[num_files_index])):
 
@@ -124,10 +124,10 @@ def get_file_combinations(samples: list[tuple[str, str, float]], config: GlobalC
                 data_type_dict[dtype] = [(num_files_index, sample_file_index)]
 
     datatype_tuples = []
-    for key in data_type_dict:
+    for columns_for_datatype in data_type_dict.values():
         temp_list = []
-        for ele in range(0, len(data_type_dict[key])):
-            temp_list.append(samples[data_type_dict[key][ele][0]][data_type_dict[key][ele][1]])
+        for column_for_datatype in columns_for_datatype:
+            temp_list.append(samples[column_for_datatype[0]][column_for_datatype[1]])
 
         datatype_tuples.append(temp_list)
 
