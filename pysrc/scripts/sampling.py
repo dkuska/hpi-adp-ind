@@ -22,7 +22,7 @@ def sample_csv(file_path: str,
                config: GlobalConfiguration) -> list[tuple[str, str, float]]:
     """Sample every single column of file seperately with a certain method and rate
     and create a new tmp file for every column. Returns a list of tuples including
-    the path, rate, method of the  column of the sampled file.
+    the path, method, rate of the  column of the sampled file.
     """
 
     samples: list[tuple[str, str, float]] = []
