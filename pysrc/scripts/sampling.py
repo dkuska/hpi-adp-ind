@@ -42,7 +42,6 @@ def sample_csv(file_path: str,
 
         if config.header:
             file_header = aggregate_data_per_column[column][0]
-            data = aggregate_data_per_column[column][1:]
 
         num_entries = len(aggregate_data_per_column[column])
         num_samples = math.ceil(num_entries * sampling_rate)
@@ -194,9 +193,6 @@ def run_experiments(config: GlobalConfiguration) -> str:
     #TODO change to clever sampling schema
     file_combinations_to_test = get_file_combinations(samples, config)
     for file_combination_setup in file_combinations_to_test:
-        file_combination: list[str];
-        used_sampling_methods: list[str];
-        used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*file_combination_setup)
         configurations.append(MetanomeRunConfiguration(
             arity=config.arity,
