@@ -16,6 +16,7 @@ from ..sampling_methods import sampling_methods_dict
 from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 
 
+
 def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
@@ -146,7 +147,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
         in os.listdir(os.path.join(os.getcwd(), config.source_dir))
         if f.rsplit('.')[1] == 'csv'
     ]
-    baseline_identifier = ' '.join(source_files)
+
     #Find clever way for column based sampling
     baselineset: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]

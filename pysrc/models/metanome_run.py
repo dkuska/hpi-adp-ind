@@ -2,9 +2,12 @@ import datetime
 import json
 import os
 from dataclasses import dataclass
-from typing import Iterator, Optional
+import statistics
+from typing import Iterator
+from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
+from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove
 from pysrc.models.ind import IND
 
 
@@ -30,16 +33,60 @@ class MetanomeRunConfiguration:
 
     is_baseline: bool
 
+    def __hash__(self) -> int:
+        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir, tuple(self.source_files), self.tmp_folder, self.results_folder,
+        self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
+
 
 @dataclass(frozen=True)
 class MetanomeRunResults:
     inds: list[IND]
+
+    def has_ind(self, other_ind: IND) -> bool:
+        """This checks whether this object has an IND that is identical to the passed-in one,
+        i.e. whether they are from the same table and column, but may differ by name"""
+        # Check whether it's directly contained
+        if other_ind in self.inds:
+            return True
+        clean_other_ind = IND(
+            dependents=[
+                ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
+                for column
+                in other_ind.dependents
+            ], referenced=[
+                ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
+                for column
+                in other_ind.referenced
+            ])
+        # Check whether cleaned other is directly contained
+        if clean_other_ind in self.inds:
+            return True
+
+        clean_inds = [
+            IND(
+                dependents=[
+                    ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
+                    for column
+                    in ind.dependents
+                ], referenced=[
+                    ColumnInformation(table_name=column.table_name.split('__')[0], column_name=column.column_name)
+                    for column
+                    in ind.referenced
+                ])
+            for ind
+            in self.inds
+        ]
+        # Check whether cleaned version is in cleaned version
+        return clean_other_ind in clean_inds
 
     def __len__(self) -> int:
         return len(self.inds)
 
     def __iter__(self) -> Iterator[IND]:
         return self.inds.__iter__()
+
+    def __hash__(self) -> int:
+        return hash((tuple(self.inds)))
 
 
 @dataclass(frozen=True)
@@ -61,6 +108,32 @@ class MetanomeRunBatch:
     @property
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
+    
+    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float, float, float]]:
+        """Returns the average number (absolute & relative) of rows (total & unique) to remove such that false positive INDs become real
+        The form of a dict entry is (absolute_total, relative_total, absolute_distinct, relative_distinct)"""
+        baseline = self.baseline
+        results: dict[MetanomeRun, tuple[float, float, float, float]] = {}
+        for run in self.runs:
+            tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
+            run_results: dict[IND, list[ErrorMetric]] = {ind: ind.errors for ind in run.results.inds}
+            tuples_to_remove_errors: list[TuplesToRemove] = [
+                error
+                for sublist
+                in run_results.values()
+                for error
+                in sublist
+                if isinstance(error, TuplesToRemove)
+            ]
+            # Consider whether a mean is appropriate here (also consider sum or other metrics)
+            # Also consider that unique tuples to be removed may overlap between INDs.
+            # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
+            avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_uniq = statistics.fmean([error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
+        return results
 
 
 def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
@@ -166,11 +239,12 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
     separator = '\\;'
     output_rule = f'file:{output_fname}'
+    allowed_gb: int = 6
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
 
-    execute_str = f'java -cp {metanome_cli_path}:{algorithm_path} de.metanome.cli.App \
+    execute_str = f'java -Xmx{allowed_gb}g -cp {metanome_cli_path}:{algorithm_path} de.metanome.cli.App \
                     --algorithm {algorithm_class_name} \
                     --files {file_name_list} \
                     --separator {separator} \
@@ -188,31 +262,18 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     return MetanomeRun(configuration=configuration, results=result)
 
 
-def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> list[str]:
-    sampled_file_paths = run.configuration.source_files
-    sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
-
-    file_names, methods, rates = [],[],[]
-    for sampled_file in sampled_file_names:
-        split_filename = sampled_file.split('_')
-        if len(split_filename) == 4:
-            fname, sampling_rate, sampling_method, org_row = split_filename
-            sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
-        else:
-            fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
-
-        file_names.append(fname)
-        methods.append(sampling_method)
-        rates.append(sampling_rate)
+# For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
+def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
 
     tp, fp = 0, 0
-    inds = run.results.inds
     num_inds = len(inds)
 
     for ind in inds:
-        if ind in baseline.inds:
+        if baseline.has_ind(ind):
+            ind.errors.append(INDType('TP'))
             tp += 1
         else:
+            ind.errors.append(INDType('FP'))
             fp += 1
 
     fn = len(baseline.inds) - tp
@@ -224,4 +285,81 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     else:
         precision, recall, f1 = 0, 0, 0
 
-    return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+    return tp, fp, fn, precision, recall, f1
+
+
+# For nary INDs, this returns lists with counts for each arity
+def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
+    num_inds = len(inds)
+
+    max_arity = max([ind.arity() for ind in baseline.inds])
+
+    tp, fp = [0 for _ in range(max_arity)], [0 for _ in range(max_arity)]
+    inds_per_arity = [0 for _ in range(max_arity)]
+    for ind in baseline.inds:
+        inds_per_arity[ind.arity() - 1] += 1
+
+    for ind in inds:
+        arity = ind.arity() - 1 # -1 to match list indices
+        if baseline.has_ind(ind):
+            ind.errors.append(INDType('TP'))
+            tp[arity] += 1
+        else:
+            ind.errors.append(INDType('FP'))
+            fp[arity] += 1
+
+    fn = [inds_per_arity[arity] - tp[arity] for arity in range(max_arity)]
+
+    precision, recall, f1 = [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)]
+    for i in range(max_arity):
+        if tp[i] + fp[i] > 0:
+            precision[i] = tp[i] / (tp[i] + fp[i])
+
+        if tp[i] + fn[i] > 0:
+            recall[i] = tp[i] / (tp[i] + fn[i])
+
+        if recall[i] + precision[i] > 0:
+            f1[i] = 2*(precision[i] * recall[i])/(precision[i] + recall[i])
+        else:
+            f1[i] = float('nan')
+
+    return tp, fp, fn, precision, recall, f1
+
+
+def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> list[str]:
+    sampled_file_paths = run.configuration.source_files
+    sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
+
+    file_names, methods, rates = [],[],[]
+    for sampled_file in sampled_file_names:
+        split_filename = sampled_file.split('__')
+        split_metadata = []
+        if len(split_filename) == 2:
+            split_metadata = split_filename[1].split('_')
+        split_filename = [split_filename[0]]
+        if len(split_metadata) == 2:
+            split_filename.append(split_metadata[0])
+            split_filename.append(split_metadata[1])
+        if len(split_filename) == 3:
+            fname, sampling_rate, sampling_method = split_filename
+            sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
+        else:
+            fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
+
+        file_names.append(fname)
+        methods.append(sampling_method)
+        rates.append(sampling_rate)
+
+    if run.configuration.arity == 'unary':
+        tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+    else:
+        tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), \
+                '; '.join([str(tp_i) for tp_i in tp]), \
+                '; '.join([str(fp_i) for fp_i in fp]), \
+                '; '.join([str(fn_i) for fn_i in fn]), \
+                '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
+                '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
+                '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
+
