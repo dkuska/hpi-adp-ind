@@ -125,6 +125,10 @@ class MetanomeRunBatch:
                 in sublist
                 if isinstance(error, TuplesToRemove)
             ]
+            # Return 0 for every metric if there are no INDs
+            if len(tuples_to_remove_errors) == 0:
+                results[run] = (0, 0, 0, 0)
+                continue
             # Consider whether a mean is appropriate here (also consider sum or other metrics)
             # Also consider that unique tuples to be removed may overlap between INDs.
             # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
@@ -279,8 +283,8 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
     fn = len(baseline.inds) - tp
 
     if num_inds > 0:
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)    
+        precision = tp / (tp + fp) if tp + fp != 0 else float('nan')
+        recall = tp / (tp + fn) if tp + fn != 0 else float('nan')
         f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
     else:
         precision, recall, f1 = 0, 0, 0
