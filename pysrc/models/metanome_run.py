@@ -341,11 +341,12 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         if len(split_filename) == 2:
             split_metadata = split_filename[1].split('_')
         split_filename = [split_filename[0]]
-        if len(split_metadata) == 2:
+        if len(split_metadata) == 3:
             split_filename.append(split_metadata[0])
             split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
             fname, sampling_rate, sampling_method = split_filename
+            fname = fname + '_' + split_metadata[2]
             sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
             fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
