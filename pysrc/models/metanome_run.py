@@ -242,6 +242,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     algorithm_path = 'BINDER.jar'
     algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
     separator = '\\;'
+    escape = '\\\\'
     output_rule = f'file:{output_fname}'
     allowed_gb: int = 6
 
@@ -255,6 +256,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                     --file-key INPUT_FILES \
                     --skip-differing-lines \
                     -o {output_rule} \
+                    --escape {escape} \
                     --algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
     if configuration.clip_output:
         execute_str += ' | tail -n 2'

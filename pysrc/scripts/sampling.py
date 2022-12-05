@@ -55,13 +55,11 @@ def sample_csv(file_path: str,
         sampled_data = sampling_method_function([aggregate_data_per_column[column]], num_samples, num_entries)
 
         with open(new_file_path, 'w') as file:
-            writer = csv.writer(file, delimiter=';', escapechar='\\')
-            if config.header:
-                writer.writerow([file_header])
 
-            #Changed for better readability
-            for out_row in sampled_data:
-                writer.writerow([out_row])
+            if config.header:
+                file.writelines(sampled_data.to_csv(index=False, sep=';', lineterminator='\n'))
+
+            file.writelines(sampled_data.to_csv(index=False, header=False, sep=';', lineterminator='\n'))
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
         samples.append(out_tuple)
