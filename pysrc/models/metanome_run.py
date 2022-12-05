@@ -125,6 +125,10 @@ class MetanomeRunBatch:
                 in sublist
                 if isinstance(error, TuplesToRemove)
             ]
+            # Return 0 for every metric if there are no INDs
+            if len(tuples_to_remove_errors) == 0:
+                results[run] = (0, 0, 0, 0)
+                continue
             # Consider whether a mean is appropriate here (also consider sum or other metrics)
             # Also consider that unique tuples to be removed may overlap between INDs.
             # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
@@ -136,7 +140,7 @@ class MetanomeRunBatch:
         return results
 
 
-def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -148,7 +152,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
     for line in lines:
         line_json = json.loads(line)
-        if arity == 'unary':
+        if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
             dependant_column = dependant_raw['columnIdentifier']
@@ -162,7 +166,23 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced])
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
-        elif arity == 'nary':
+
+        elif arity == 'unary' and is_baseline == False:
+            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+
+            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+
+            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+            ind = IND(dependents=[dependant], referenced=[referenced])
+            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+
+        elif arity == 'nary' and is_baseline == True:
             dependant_list: list[ColumnInformation] = []
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
@@ -177,6 +197,28 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
                 referenced_column = referenced_entry['columnIdentifier']
+                referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                referenced_list.append(referenced)
+
+            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+            ind = IND(dependents=dependant_list, referenced=referenced_list)
+
+        elif arity == 'nary' and is_baseline == False:
+            dependant_list = []
+            dependant_raw = line_json['dependant']['columnIdentifiers']
+            for dependant_entry in dependant_raw:
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                dependant_list.append(dependant)
+
+            referenced_list = []
+            referenced_raw = line_json['referenced']['columnIdentifiers']
+            for referenced_entry in referenced_raw:
+                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
@@ -219,12 +261,14 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     # Run
     os.system(execute_str)
     # Parse
-    result = parse_results(output_fname + configuration.result_suffix, configuration.arity, configuration.results_folder, configuration.print_inds)
+    result = parse_results(output_fname + configuration.result_suffix, configuration.arity,
+                           configuration.results_folder, configuration.print_inds, configuration.is_baseline)
     return MetanomeRun(configuration=configuration, results=result)
 
 
 # For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
 def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
+
     tp, fp = 0, 0
     num_inds = len(inds)
 
@@ -239,8 +283,8 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
     fn = len(baseline.inds) - tp
 
     if num_inds > 0:
-        precision = tp / (tp + fp)
-        recall = tp / (tp + fn)    
+        precision = tp / (tp + fp) if tp + fp != 0 else float('nan')
+        recall = tp / (tp + fn) if tp + fn != 0 else float('nan')
         f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
     else:
         precision, recall, f1 = 0, 0, 0
@@ -297,11 +341,12 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         if len(split_filename) == 2:
             split_metadata = split_filename[1].split('_')
         split_filename = [split_filename[0]]
-        if len(split_metadata) == 2:
+        if len(split_metadata) == 3:
             split_filename.append(split_metadata[0])
             split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
             fname, sampling_rate, sampling_method = split_filename
+            fname = fname + '_' + split_metadata[2]
             sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
             fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
