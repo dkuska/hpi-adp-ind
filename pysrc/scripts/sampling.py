@@ -59,8 +59,11 @@ def sample_csv(file_path: str,
             if config.header:
                 writer.writerow([file_header])
 
+            empty_str = ''
             #Changed for better readability
             for out_row in sampled_data:
+                if out_row == empty_str:
+                    continue
                 writer.writerow([out_row])
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
