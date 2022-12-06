@@ -7,7 +7,7 @@ from typing import Iterator
 from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
-from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove
+from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingValues
 from pysrc.models.ind import IND
 
 
@@ -164,8 +164,12 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_column = referenced_raw['columnIdentifier']
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
+            error: list[ErrorMetric] = []
+            if algorithm == 'PartialSPIDER':
+                missingValues = line_json["missingValues"]
+                error.append(MissingValues(missingValues))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced])
+            ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
         elif arity == 'unary' and is_baseline == False:
@@ -265,7 +269,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                     --escape {escape} '
                     
     if configuration.algorithm == 'BINDER':
-        execute_str += '--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
+        execute_str += f'--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
     else:
         execute_str += '--algorithm-config TEMP_FOLDER_PATH:SPIDER_temp,\
                         INPUT_ROW_LIMIT:-1,\
