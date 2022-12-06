@@ -153,6 +153,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
     for line in lines:
         line_json = json.loads(line)
+        error: list[ErrorMetric] = []
         if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
@@ -164,7 +165,6 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_column = referenced_raw['columnIdentifier']
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
-            error: list[ErrorMetric] = []
             if algorithm == 'PartialSPIDER':
                 missingValues = line_json["missingValues"]
                 error.append(MissingValues(missingValues))
@@ -183,7 +183,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
-            error: list[ErrorMetric] = []
+            
             if algorithm == 'PartialSPIDER':
                 missingValues = line_json["missingValues"]
                 error.append(MissingValues(missingValues))
