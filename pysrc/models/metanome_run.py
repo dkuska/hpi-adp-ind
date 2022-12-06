@@ -153,84 +153,81 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
     for line in lines:
         line_json = json.loads(line)
-        if algorithm == 'BINDER':
-            if arity == 'unary' and is_baseline == True:
-                dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-                dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
-                dependant_column = dependant_raw['columnIdentifier']
+        if arity == 'unary' and is_baseline == True:
+            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
+            dependant_column = dependant_raw['columnIdentifier']
+            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+
+            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0]
+            referenced_column = referenced_raw['columnIdentifier']
+            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+
+            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+            ind = IND(dependents=[dependant], referenced=[referenced])
+            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+
+        elif arity == 'unary' and is_baseline == False:
+            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+
+            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+
+            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+            ind = IND(dependents=[dependant], referenced=[referenced])
+            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+
+        elif arity == 'nary' and is_baseline == True:
+            dependant_list: list[ColumnInformation] = []
+            dependant_raw = line_json['dependant']['columnIdentifiers']
+            for dependant_entry in dependant_raw:
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
+                dependant_column = dependant_entry['columnIdentifier']
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                dependant_list.append(dependant)
 
-                referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-                referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0]
-                referenced_column = referenced_raw['columnIdentifier']
+            referenced_list: list[ColumnInformation] = []
+            referenced_raw = line_json['referenced']['columnIdentifiers']
+            for referenced_entry in referenced_raw:
+                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
+                referenced_column = referenced_entry['columnIdentifier']
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                referenced_list.append(referenced)
 
-                # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-                ind = IND(dependents=[dependant], referenced=[referenced])
-                # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+            ind = IND(dependents=dependant_list, referenced=referenced_list)
 
-            elif arity == 'unary' and is_baseline == False:
-                dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-                dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+        elif arity == 'nary' and is_baseline == False:
+            dependant_list = []
+            dependant_raw = line_json['dependant']['columnIdentifiers']
+            for dependant_entry in dependant_raw:
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                dependant_list.append(dependant)
 
-                referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-                referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced_list = []
+            referenced_raw = line_json['referenced']['columnIdentifiers']
+            for referenced_entry in referenced_raw:
+                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                referenced_list.append(referenced)
 
-                # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-                ind = IND(dependents=[dependant], referenced=[referenced])
-                # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
-
-            elif arity == 'nary' and is_baseline == True:
-                dependant_list: list[ColumnInformation] = []
-                dependant_raw = line_json['dependant']['columnIdentifiers']
-                for dependant_entry in dependant_raw:
-                    dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
-                    dependant_column = dependant_entry['columnIdentifier']
-                    dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                    # dependant_list.append(f'{dependant_table}.{dependant_column}')
-                    dependant_list.append(dependant)
-
-                referenced_list: list[ColumnInformation] = []
-                referenced_raw = line_json['referenced']['columnIdentifiers']
-                for referenced_entry in referenced_raw:
-                    referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
-                    referenced_column = referenced_entry['columnIdentifier']
-                    referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                    # referenced_list.append(f'{referenced_table}.{referenced_column}')
-                    referenced_list.append(referenced)
-
-                # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
-                ind = IND(dependents=dependant_list, referenced=referenced_list)
-
-            elif arity == 'nary' and is_baseline == False:
-                dependant_list = []
-                dependant_raw = line_json['dependant']['columnIdentifiers']
-                for dependant_entry in dependant_raw:
-                    dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                    dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
-                    dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                    # dependant_list.append(f'{dependant_table}.{dependant_column}')
-                    dependant_list.append(dependant)
-
-                referenced_list = []
-                referenced_raw = line_json['referenced']['columnIdentifiers']
-                for referenced_entry in referenced_raw:
-                    referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                    referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
-                    referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                    # referenced_list.append(f'{referenced_table}.{referenced_column}')
-                    referenced_list.append(referenced)
-
-                # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
-                ind = IND(dependents=dependant_list, referenced=referenced_list)
-            else:
-                continue
-        elif algorithm == 'PartialSPIDER':
-            pass
+            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+            ind = IND(dependents=dependant_list, referenced=referenced_list)
+        else:
+            continue
         
         ind_list.append(ind)
 
@@ -265,8 +262,17 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                     --file-key INPUT_FILES \
                     --skip-differing-lines \
                     -o {output_rule} \
-                    --escape {escape} \
-                    --algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
+                    --escape {escape} '
+                    
+    if configuration.algorithm == 'BINDER':
+        execute_str += '--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
+    else:
+        execute_str += '--algorithm-config TEMP_FOLDER_PATH:SPIDER_temp,\
+                        INPUT_ROW_LIMIT:-1,\
+                        MAX_MEMORY_USAGE_PERCENTAGE:60,\
+                        CLEAN_TEMP:true,\
+                        MEMORY_CHECK_FREQUENCY:100,\
+                        MAX_NUMBER_MISSING_VALUES:5'    
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
     # Run

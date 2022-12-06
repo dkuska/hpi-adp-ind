@@ -200,6 +200,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
     for file_combination_setup in file_combinations_to_test:
         file_combination, used_sampling_methods, used_sampling_rates = zip(*file_combination_setup)
         configurations.append(MetanomeRunConfiguration(
+            algorithm=config.algorithm,
             arity=config.arity,
             sampling_rates=used_sampling_rates,
             sampling_methods=used_sampling_methods,
