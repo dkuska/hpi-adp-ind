@@ -8,6 +8,7 @@ from dateutil import parser as datetime_parser
 
 @dataclass(frozen=True)
 class GlobalConfiguration:
+    algorithm: str
     arity: str
     sampling_rates: list[float]
     sampling_methods: list[str]
@@ -35,11 +36,13 @@ class GlobalConfiguration:
 
     @classmethod
     def default(cls, args: dict[str, Any]):
+        algorithm = cls._construct_from_default(args, 'algorithm', str, ['BINDER', 'PartialSPIDER'][1])
         arity = cls._construct_from_default(args, 'arity', str, ['unary', 'nary'][0])
         now = cls._construct_from_default(args, 'now', datetime.datetime, datetime.datetime.now())
         now_date = f'{now.year}{now.month:02d}{now.day}'
         now_time = f'{now.hour}{now.minute:02d}{now.second:02d}'
         return cls(
+            algorithm=algorithm,
             arity=arity,
             sampling_rates=[0.1],
             sampling_methods=['evenly-spaced'],
@@ -60,6 +63,7 @@ class GlobalConfiguration:
     @staticmethod
     def argparse_arguments(parser: ArgumentParser) -> None:
         """Modifies the provided argparse parser by adding optional arguments for all config options"""
+        parser.add_argument('--algorithm', type=str, required=False, default=None, help='Which algorithm to use, either PartialSPIDER or BINDER')
         parser.add_argument('--arity', type=str, required=False, default=None, help='Whether to find `unary` or `nary` INDs')
         parser.add_argument('--now', type=datetime_parser.parse, required=False, default=None, help='The time to use as `now`')
         parser.add_argument('--header', action=BooleanOptionalAction, required=False, default=None, help='Whether the provided csv files have headers')

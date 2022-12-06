@@ -175,6 +175,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
         file_combination: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline_tuple)
         configurations.append(MetanomeRunConfiguration(
+            algorithm=config.algorithm,
             arity=config.arity,
             sampling_rates=used_sampling_rates,
             sampling_methods=used_sampling_methods,

@@ -14,6 +14,7 @@ from pysrc.models.ind import IND
 @dataclass(frozen=True)
 class MetanomeRunConfiguration:
     """Contains configuration information about a Metanome run"""
+    algorithm: str
     arity: str
     sampling_rates: list[float]
     sampling_methods: list[str]
@@ -140,7 +141,7 @@ class MetanomeRunBatch:
         return results
 
 
-def parse_results(result_file_name: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -152,82 +153,85 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
     for line in lines:
         line_json = json.loads(line)
-        if arity == 'unary' and is_baseline == True:
-            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
-            dependant_column = dependant_raw['columnIdentifier']
-            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-
-            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0]
-            referenced_column = referenced_raw['columnIdentifier']
-            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-
-            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced])
-            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
-
-        elif arity == 'unary' and is_baseline == False:
-            dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
-            dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-
-            referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
-            referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-
-            # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced])
-            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
-
-        elif arity == 'nary' and is_baseline == True:
-            dependant_list: list[ColumnInformation] = []
-            dependant_raw = line_json['dependant']['columnIdentifiers']
-            for dependant_entry in dependant_raw:
-                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
-                dependant_column = dependant_entry['columnIdentifier']
+        if algorithm == 'BINDER':
+            if arity == 'unary' and is_baseline == True:
+                dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+                dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
+                dependant_column = dependant_raw['columnIdentifier']
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
-                dependant_list.append(dependant)
 
-            referenced_list: list[ColumnInformation] = []
-            referenced_raw = line_json['referenced']['columnIdentifiers']
-            for referenced_entry in referenced_raw:
-                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
-                referenced_column = referenced_entry['columnIdentifier']
+                referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+                referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0]
+                referenced_column = referenced_raw['columnIdentifier']
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
-                referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
-            ind = IND(dependents=dependant_list, referenced=referenced_list)
+                # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+                ind = IND(dependents=[dependant], referenced=[referenced])
+                # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
-        elif arity == 'nary' and is_baseline == False:
-            dependant_list = []
-            dependant_raw = line_json['dependant']['columnIdentifiers']
-            for dependant_entry in dependant_raw:
-                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            elif arity == 'unary' and is_baseline == False:
+                dependant_raw = line_json['dependant']['columnIdentifiers'][0]
+                dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
-                dependant_list.append(dependant)
 
-            referenced_list = []
-            referenced_raw = line_json['referenced']['columnIdentifiers']
-            for referenced_entry in referenced_raw:
-                referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                referenced_raw = line_json['referenced']['columnIdentifiers'][0]
+                referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
-                referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
-            ind = IND(dependents=dependant_list, referenced=referenced_list)
-        else:
-            continue
+                # TODO: Figure out better way to identify inds. Is this parsing even necessary?
+                ind = IND(dependents=[dependant], referenced=[referenced])
+                # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
+            elif arity == 'nary' and is_baseline == True:
+                dependant_list: list[ColumnInformation] = []
+                dependant_raw = line_json['dependant']['columnIdentifiers']
+                for dependant_entry in dependant_raw:
+                    dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
+                    dependant_column = dependant_entry['columnIdentifier']
+                    dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                    # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                    dependant_list.append(dependant)
+
+                referenced_list: list[ColumnInformation] = []
+                referenced_raw = line_json['referenced']['columnIdentifiers']
+                for referenced_entry in referenced_raw:
+                    referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
+                    referenced_column = referenced_entry['columnIdentifier']
+                    referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                    # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                    referenced_list.append(referenced)
+
+                # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+                ind = IND(dependents=dependant_list, referenced=referenced_list)
+
+            elif arity == 'nary' and is_baseline == False:
+                dependant_list = []
+                dependant_raw = line_json['dependant']['columnIdentifiers']
+                for dependant_entry in dependant_raw:
+                    dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                    dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                    dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
+                    # dependant_list.append(f'{dependant_table}.{dependant_column}')
+                    dependant_list.append(dependant)
+
+                referenced_list = []
+                referenced_raw = line_json['referenced']['columnIdentifiers']
+                for referenced_entry in referenced_raw:
+                    referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                    referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                    referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
+                    # referenced_list.append(f'{referenced_table}.{referenced_column}')
+                    referenced_list.append(referenced)
+
+                # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
+                ind = IND(dependents=dependant_list, referenced=referenced_list)
+            else:
+                continue
+        elif algorithm == 'PartialSPIDER':
+            pass
+        
         ind_list.append(ind)
 
     if print_inds:
@@ -237,10 +241,15 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
 
 
 def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> MetanomeRun:
-    # Make these configurable
+    # TODO: Make these configurable
+    if configuration.algorithm == 'BINDER':
+        algorithm_path = 'BINDER.jar'
+        algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
+    elif configuration.algorithm == 'PartialSPIDER':
+        algorithm_path = 'PartialSPIDER.jar'
+        algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
+    
     metanome_cli_path = 'metanome-cli.jar'
-    algorithm_path = 'BINDER.jar'
-    algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
     separator = '\\;'
     escape = '\\\\'
     output_rule = f'file:{output_fname}'
@@ -263,8 +272,12 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     # Run
     os.system(execute_str)
     # Parse
-    result = parse_results(output_fname + configuration.result_suffix, configuration.arity,
-                           configuration.results_folder, configuration.print_inds, configuration.is_baseline)
+    result = parse_results(result_file_name=output_fname + configuration.result_suffix, 
+                           algorithm=configuration.algorithm,
+                           arity=configuration.arity,
+                           results_folder=configuration.results_folder,
+                           print_inds=configuration.print_inds, 
+                           is_baseline=configuration.is_baseline)
     return MetanomeRun(configuration=configuration, results=result)
 
 

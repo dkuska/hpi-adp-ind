@@ -18,3 +18,7 @@ class TuplesToRemove(ErrorMetric):
 @dataclass(frozen=True)
 class INDType(ErrorMetric):
     ind_type: Literal['TP', 'FP']
+
+@dataclass(frozen=True)
+class MissingValues(ErrorMetric):
+    missing_values: int
