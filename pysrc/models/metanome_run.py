@@ -183,9 +183,12 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
+            error: list[ErrorMetric] = []
+            if algorithm == 'PartialSPIDER':
+                missingValues = line_json["missingValues"]
+                error.append(MissingValues(missingValues))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced])
-            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
+            ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
 
         elif arity == 'nary' and is_baseline == True:
             dependant_list: list[ColumnInformation] = []
@@ -272,13 +275,14 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
         execute_str += f'--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
     else:
         execute_str += '--algorithm-config TEMP_FOLDER_PATH:SPIDER_temp,\
-                        INPUT_ROW_LIMIT:-1,\
                         MAX_MEMORY_USAGE_PERCENTAGE:60,\
+                        INPUT_ROW_LIMIT:-1,\
                         CLEAN_TEMP:true,\
                         MEMORY_CHECK_FREQUENCY:100,\
                         MAX_NUMBER_MISSING_VALUES:5'    
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
+
     # Run
     os.system(execute_str)
     # Parse
