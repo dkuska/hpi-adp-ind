@@ -279,7 +279,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                         INPUT_ROW_LIMIT:-1,\
                         CLEAN_TEMP:true,\
                         MEMORY_CHECK_FREQUENCY:100,\
-                        MAX_NUMBER_MISSING_VALUES:5'    
+                        MAX_NUMBER_MISSING_VALUES:50'    
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
 

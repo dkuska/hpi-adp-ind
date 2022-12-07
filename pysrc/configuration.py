@@ -44,8 +44,8 @@ class GlobalConfiguration:
         return cls(
             algorithm=algorithm,
             arity=arity,
-            sampling_rates=[0.1],
-            sampling_methods=['evenly-spaced'],
+            sampling_rates=[0.1, 0.01, 0.001],
+            sampling_methods=['random', 'first', 'evenly-spaced'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),
             print_inds=cls._construct_from_default(args, 'print_inds', bool, False),

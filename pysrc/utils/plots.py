@@ -26,11 +26,16 @@ def create_PrecisionRecallF1_lineplot(axes : matplotlib.axes.Axes, dataframe: pd
     many_plots = len(df_grouped) > 10
     
     d = []
+    identifiers = []
     for group_identifier, frame in df_grouped:
+        identifiers.append(group_identifier)
         d.append([group_identifier, frame['precision'].mean(), frame['recall'].mean(), frame['f1'].mean()])            
     df_grouped = pd.DataFrame(data=d, columns=[groupby_attr, 'Precision', 'Recall', 'F1-Score']).set_index(groupby_attr)
 
     sns.lineplot(data=df_grouped, ax=axes)
+    
+    if isinstance(identifiers[0], float):
+        axes.set_xscale('log')
     
     if many_plots: # If there are too many entries, attempt to make it somewhat readable...
         axes.tick_params(axis='x', rotation=90)
