@@ -46,26 +46,45 @@ def create_TpFpFn_stacked_barplot(axes : matplotlib.axes.Axes, dataframe: pd.Dat
     df_grouped = dataframe.groupby(groupby_attr)
     many_plots = len(df_grouped) > 10
     
+    identifiers = []
     d = []
     for group_identifier, frame in df_grouped:
+        identifiers.append(group_identifier)
         for _ in range(int(frame['tp'].mean())):
             d.append([group_identifier,'tp', 1])
         for _ in range(int(frame['fp'].mean())):
             d.append([group_identifier,'fp', 1])
         for _ in range(int(frame['fn'].mean())):
             d.append([group_identifier,'fn', 1])
-        
+    
     df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'type', 'count'])
-    sns.histplot(
-        df_grouped,
-        x=groupby_attr,
-        hue='type',
-        hue_order=['tp', 'fp', 'fn'],
-        multiple='stack',
-        ax=axes,
-        discrete=True,
-        linewidth=.3
-    )
+    
+    if isinstance(identifiers[0], float):
+        sns.histplot(
+            df_grouped,
+            x=groupby_attr,
+            hue='type',
+            hue_order=['tp', 'fp', 'fn'],
+            multiple='stack',
+            ax=axes,
+            discrete=True,
+            linewidth=.3,
+            log_scale=True,
+        )
+        axes.set_xticks(identifiers)
+    else:
+        sns.histplot(
+            df_grouped,
+            x=groupby_attr,
+            hue='type',
+            hue_order=['tp', 'fp', 'fn'],
+            multiple='stack',
+            ax=axes,
+            discrete=True,
+            linewidth=.3,
+            bins=identifiers
+        )
+    
     if many_plots: # If there are too many entries, attempt to make it somewhat readable...
         axes.tick_params(axis='x', rotation=90)
         axes.tick_params(axis='x', labelsize=4)
