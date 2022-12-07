@@ -157,17 +157,24 @@ def run_experiments(config: GlobalConfiguration) -> str:
         for src_file
         in source_files
     ]
-
+    
     # Sample each source file
     samples = []
-    for i, file_path in enumerate(source_files):
-        for sampling_method in config.sampling_methods:
-            for sampling_rate in config.sampling_rates:
-                # Sample
-                new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
-                samples.append(new_file_list)
+    for sampling_method in config.sampling_methods:
+        for sampling_rate in config.sampling_rates:
+            new_file_list = []
+            for i, file_path in enumerate(source_files):
+                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, config))
+            samples.append(new_file_list)
+            
+    # for i, file_path in enumerate(source_files):
+    #     for sampling_method in config.sampling_methods:
+    #         for sampling_rate in config.sampling_rates:
+    #             # Sample
+    #             new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
+    #             samples.append(new_file_list)
 
-
+    
 
     # Build cartesian product of all possible file combinations
     configurations: list[MetanomeRunConfiguration] = []
@@ -197,7 +204,8 @@ def run_experiments(config: GlobalConfiguration) -> str:
 
     #TODO change to clever sampling schema
     file_combinations_to_test = get_file_combinations(samples, config)
-    for file_combination_setup in file_combinations_to_test:
+    # for file_combination_setup in file_combinations_to_test:
+    for file_combination_setup in samples:
         file_combination, used_sampling_methods, used_sampling_rates = zip(*file_combination_setup)
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
