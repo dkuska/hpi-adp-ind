@@ -16,7 +16,6 @@ from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 from ..utils.sampling_methods import sampling_methods_dict
 
 
-
 def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
@@ -36,7 +35,7 @@ def sample_csv(file_path: str,
         reader = csv.reader(f, delimiter=';', escapechar='\\')
         for row in reader:
             for i in range(len(row)):
-                #aggregates the data per line while reading file line by line
+                # aggregates the data per line while reading file line by line
                 aggregate_data_per_column[i].append(row[i])
 
     for column in aggregate_data_per_column:
@@ -47,8 +46,8 @@ def sample_csv(file_path: str,
         num_entries = len(aggregate_data_per_column[column])
         num_samples = math.ceil(num_entries * sampling_rate)
 
-        #rename files column specific
-        new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column+1}.csv'
+        # rename files column specific
+        new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column + 1}.csv'
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
@@ -60,7 +59,7 @@ def sample_csv(file_path: str,
                 writer.writerow([file_header])
 
             empty_str = ''
-            #Changed for better readability
+            # Changed for better readability
             for out_row in sampled_data:
                 if out_row == empty_str:
                     continue
@@ -84,7 +83,7 @@ def create_result_json(runs: MetanomeRunBatch,
     with open(output_json, 'w', encoding='utf-8') as json_file:
         json.dump(runs, json_file,
                   ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
-    
+
     return output_json
 
 
@@ -102,6 +101,7 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
+
 def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
         -> list[list[tuple[str, str, float]]]:
     data_type_dict: dict[str, list[tuple[int, int]]] = {}
@@ -110,7 +110,7 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
 
             current_tuple = samples[num_files_index][sample_file_index]
             path_to_data = current_tuple[0]
-            #TODO add handling of headers in files
+            # TODO add handling of headers in files
             df = pd.read_csv(path_to_data, sep=';', header=None, on_bad_lines='skip')
             numeric_columns = df.select_dtypes(include=np.number).columns.tolist()
             categorical_columns = df.select_dtypes(include='object').columns.tolist()
@@ -151,35 +151,20 @@ def run_experiments(config: GlobalConfiguration) -> str:
         if f.rsplit('.')[1] == 'csv'
     ]
 
-    #Find clever way for column based sampling
-    baselineset: list[list[tuple[str, str, float]]] = [
+    configurations: list[MetanomeRunConfiguration] = []
+
+    # Baseline
+    # TODO: Find clever way for column based sampling
+    baseline_set: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]
         for src_file
         in source_files
     ]
-    
-    # Sample each source file
-    samples = []
-    for sampling_method in config.sampling_methods:
-        for sampling_rate in config.sampling_rates:
-            new_file_list = []
-            for i, file_path in enumerate(source_files):
-                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, config))
-            samples.append(new_file_list)
-            
-    # for i, file_path in enumerate(source_files):
-    #     for sampling_method in config.sampling_methods:
-    #         for sampling_rate in config.sampling_rates:
-    #             # Sample
-    #             new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
-    #             samples.append(new_file_list)
-
-    
-
-    # Build cartesian product of all possible file combinations
-    configurations: list[MetanomeRunConfiguration] = []
-    for baseline_tuple in itertools.product(*baselineset):
-        file_combination: list[str]; used_sampling_methods: list[str]; used_sampling_rates: list[float]
+    # Add Configuration for baseline
+    for baseline_tuple in itertools.product(*baseline_set):
+        file_combination: list[str];
+        used_sampling_methods: list[str];
+        used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline_tuple)
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
@@ -198,14 +183,33 @@ def run_experiments(config: GlobalConfiguration) -> str:
             header=config.header,
             print_inds=config.print_inds,
             create_plots=config.create_plots,
-            is_baseline=True
-
+            is_baseline=True,
         ))
 
-    #TODO change to clever sampling schema
-    file_combinations_to_test = get_file_combinations(samples, config)
+    # Sampled runs
+    # Sample each source file
+    # Note: New approach: Group by sampling approach and rate already during sample creation
+    # This replaces the need for get_file_combinations later on
+    samples = []
+    for sampling_method in config.sampling_methods:
+        for sampling_rate in config.sampling_rates:
+            new_file_list = []
+            for i, file_path in enumerate(source_files):
+                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, config))
+            samples.append(new_file_list)
+    # Note: Old approach
+    # for i, file_path in enumerate(source_files):
+    #     for sampling_method in config.sampling_methods:
+    #         for sampling_rate in config.sampling_rates:
+    #             # Sample
+    #             new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
+    #             samples.append(new_file_list)
+
+    # TODO change to clever sampling schema
+    # file_combinations_to_test = get_file_combinations(samples, config)
     # for file_combination_setup in file_combinations_to_test:
     for file_combination_setup in samples:
+        # TODO: Split this also by column type
         file_combination, used_sampling_methods, used_sampling_rates = zip(*file_combination_setup)
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
@@ -226,7 +230,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
             create_plots=config.create_plots,
             is_baseline=False
         ))
-    
+
     # And run experiment for each
     for configuration in configurations:
         current_files_str = ' '.join(configuration.source_files)
