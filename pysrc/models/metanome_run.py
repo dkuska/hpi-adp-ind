@@ -35,8 +35,10 @@ class MetanomeRunConfiguration:
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir, tuple(self.source_files), self.tmp_folder, self.results_folder,
-        self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
+        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
+                     tuple(self.source_files), self.tmp_folder, self.results_folder,
+                     self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header,
+                     self.print_inds, self.create_plots, self.is_baseline))
 
 
 @dataclass(frozen=True)
@@ -109,7 +111,7 @@ class MetanomeRunBatch:
     @property
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
-    
+
     def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float, float, float]]:
         """Returns the average number (absolute & relative) of rows (total & unique) to remove such that false positive INDs become real
         The form of a dict entry is (absolute_total, relative_total, absolute_distinct, relative_distinct)"""
@@ -135,13 +137,16 @@ class MetanomeRunBatch:
             # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
             avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
             avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_abs_uniq = statistics.fmean([error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_rel_uniq = statistics.fmean([error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_abs_uniq = statistics.fmean(
+                [error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
+            avg_rel_uniq = statistics.fmean(
+                [error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
             results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
         return results
 
 
-def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool, is_baseline: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool,
+                  is_baseline: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -166,8 +171,8 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
             if algorithm == 'PartialSPIDER':
-                missingValues = line_json["missingValues"]
-                error.append(MissingValues(missingValues))
+                missing_values = line_json["missingValues"]
+                error.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
@@ -183,10 +188,9 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
-            
             if algorithm == 'PartialSPIDER':
-                missingValues = line_json["missingValues"]
-                error.append(MissingValues(missingValues))
+                missing_values = line_json["missingValues"]
+                error.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
 
@@ -226,7 +230,8 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                referenced_column = 'column' + str(
+                    referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
@@ -235,7 +240,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             ind = IND(dependents=dependant_list, referenced=referenced_list)
         else:
             continue
-        
+
         ind_list.append(ind)
 
     if print_inds:
@@ -252,7 +257,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-    
+
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
     escape = '\\\\'
@@ -270,7 +275,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                     --skip-differing-lines \
                     -o {output_rule} \
                     --escape {escape} '
-                    
+
     if configuration.algorithm == 'BINDER':
         execute_str += f'--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
     else:
@@ -279,28 +284,27 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                         INPUT_ROW_LIMIT:-1,\
                         CLEAN_TEMP:true,\
                         MEMORY_CHECK_FREQUENCY:100,\
-                        MAX_NUMBER_MISSING_VALUES:50'    
+                        MAX_NUMBER_MISSING_VALUES:50'
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
 
     # Run
     os.system(execute_str)
     # Parse
-    result = parse_results(result_file_name=output_fname + configuration.result_suffix, 
+    result = parse_results(result_file_name=output_fname + configuration.result_suffix,
                            algorithm=configuration.algorithm,
                            arity=configuration.arity,
                            results_folder=configuration.results_folder,
-                           print_inds=configuration.print_inds, 
+                           print_inds=configuration.print_inds,
                            is_baseline=configuration.is_baseline)
     return MetanomeRun(configuration=configuration, results=result)
 
 
 # For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
 def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
-
     tp, fp = 0, 0
     num_inds = len(inds)
-    
+
     for ind in inds:
         if baseline.has_ind(ind):
             ind.errors.append(INDType('TP'))
@@ -314,48 +318,47 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
     if num_inds > 0:
         precision = tp / (tp + fp) if tp + fp != 0 else float('nan')
         recall = tp / (tp + fn) if tp + fn != 0 else float('nan')
-        f1 = 2*(precision * recall)/(precision + recall) if recall + precision != 0 else float('nan')
+        f1 = 2 * (precision * recall) / (precision + recall) if recall + precision != 0 else float('nan')
     else:
         precision, recall, f1 = 0, 0, 0
-        
+
     return tp, fp, fn, precision, recall, f1
 
 
 # For nary INDs, this returns lists with counts for each arity
 def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
-    num_inds = len(inds)
-    
     max_arity = max([ind.arity() for ind in baseline.inds])
- 
+
     tp, fp = [0 for _ in range(max_arity)], [0 for _ in range(max_arity)]
     inds_per_arity = [0 for _ in range(max_arity)]
     for ind in baseline.inds:
         inds_per_arity[ind.arity() - 1] += 1
-    
+
     for ind in inds:
-        arity = ind.arity() - 1 # -1 to match list indices  
+        arity = ind.arity() - 1  # -1 to match list indices
         if baseline.has_ind(ind):
             ind.errors.append(INDType('TP'))
             tp[arity] += 1
         else:
             ind.errors.append(INDType('FP'))
             fp[arity] += 1
-    
+
     fn = [inds_per_arity[arity] - tp[arity] for arity in range(max_arity)]
-    
-    precision, recall, f1 = [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)]
+
+    precision, recall, f1 = [0.0 for _ in range(max_arity)], [0.0 for _ in range(max_arity)], [0.0 for _ in
+                                                                                               range(max_arity)]
     for i in range(max_arity):
         if tp[i] + fp[i] > 0:
             precision[i] = tp[i] / (tp[i] + fp[i])
-                                    
+
         if tp[i] + fn[i] > 0:
             recall[i] = tp[i] / (tp[i] + fn[i])
-                                 
+
         if recall[i] + precision[i] > 0:
-            f1[i] = 2*(precision[i] * recall[i])/(precision[i] + recall[i])
+            f1[i] = 2 * (precision[i] * recall[i]) / (precision[i] + recall[i])
         else:
-            f1[i] = float('nan')       
-    
+            f1[i] = float('nan')
+
     return tp, fp, fn, precision, recall, f1
 
 
@@ -363,14 +366,15 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     sampled_file_paths = run.configuration.source_files
     sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
 
-    file_names, methods, rates = [],[],[]
+    file_names, methods, rates = [], [], []
     for sampled_file in sampled_file_names:
-        split_filename = sampled_file.split('__') # Detect Column Sampling, as this is evident from the '__' in the file
+        split_filename = sampled_file.split(
+            '__')  # Detect Column Sampling, as this is evident from the '__' in the file
         split_metadata = []
         if len(split_filename) == 2:
             split_metadata = split_filename[1].split('_')
         split_filename = [split_filename[0]]
-        
+
         if len(split_metadata) == 3:
             split_filename.append(split_metadata[0])
             split_filename.append(split_metadata[1])
@@ -379,35 +383,34 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
             fname = fname + '_' + split_metadata[2]
             sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
-            fname, sampling_rate, sampling_method  = sampled_file, '1.0', 'None'
+            fname, sampling_rate, sampling_method = sampled_file, '1.0', 'None'
 
         file_names.append(fname)
         methods.append(sampling_method)
         rates.append(sampling_rate)
-    
-    # Quick fix
+
+    # TODO: Clean up this code block above....
+    # Quick fix to make plots prettier
     method, rate = methods[0], rates[0]
-    
-    
+
     if run.configuration.arity == 'unary':
         tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
         return [method, rate, str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
-    
+        # NOTE: Old Version - Return Methods and rates for each file
         # return ['; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
-
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
-        
-        return [method,\
-                rate, \
-                '; '.join([str(tp_i) for tp_i in tp]), \
-                '; '.join([str(fp_i) for fp_i in fp]), \
-                '; '.join([str(fn_i) for fn_i in fn]), \
-                '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
-                '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
+
+        return [method,
+                rate,
+                '; '.join([str(tp_i) for tp_i in tp]),
+                '; '.join([str(fp_i) for fp_i in fp]),
+                '; '.join([str(fn_i) for fn_i in fn]),
+                '; '.join([f'{precision_i:.3f}' for precision_i in precision]),
+                '; '.join([f'{recall_i:.3f}' for recall_i in recall]),
                 '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
-        
+        # NOTE: Old Version - Return Methods and rates for each file
         # return ['; '.join(methods),\
         #         '; '.join(rates), \
         #         '; '.join([str(tp_i) for tp_i in tp]), \
@@ -416,4 +419,3 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         #         '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
         #         '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
         #         '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
-

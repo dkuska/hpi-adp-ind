@@ -20,7 +20,7 @@ def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
                config: GlobalConfiguration) -> list[tuple[str, str, float]]:
-    """Sample every single column of file seperately with a certain method and rate
+    """Sample every single column of file separately with a certain method and rate
     and create a new tmp file for every column. Returns a list of tuples including
     the path, method, rate of the  column of the sampled file.
     """
@@ -162,8 +162,8 @@ def run_experiments(config: GlobalConfiguration) -> str:
     ]
     # Add Configuration for baseline
     for baseline_tuple in itertools.product(*baseline_set):
-        file_combination: list[str];
-        used_sampling_methods: list[str];
+        file_combination: list[str]
+        used_sampling_methods: list[str]
         used_sampling_rates: list[float]
         file_combination, used_sampling_methods, used_sampling_rates = zip(*baseline_tuple)
         configurations.append(MetanomeRunConfiguration(
