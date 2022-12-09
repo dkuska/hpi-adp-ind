@@ -24,8 +24,8 @@ class GlobalConfiguration:
     results_folder: str
     results_suffix: str
     output_folder: str
-    output_file: str
-    plot_folder: str
+
+    result_output_folder_name: str
 
     T = TypeVar('T')
 
@@ -37,7 +37,7 @@ class GlobalConfiguration:
     def default(cls, args: dict[str, Any]):
         arity = cls._construct_from_default(args, 'arity', str, ['unary', 'nary'][0])
         now = cls._construct_from_default(args, 'now', datetime.datetime, datetime.datetime.now())
-        now_date = f'{now.year}{now.month:02d}{now.day}'
+        now_date = f'{now.year}{now.month:02d}{now.day:02d}'
         now_time = f'{now.hour}{now.minute:02d}{now.second:02d}'
         return cls(
             arity=arity,
@@ -53,8 +53,7 @@ class GlobalConfiguration:
             results_folder=cls._construct_from_default(args, 'results_folder', str, 'results/'),
             results_suffix=cls._construct_from_default(args, 'results_suffix', str, '_inds'),
             output_folder=cls._construct_from_default(args, 'output_folder', str, 'output/'),
-            output_file=cls._construct_from_default(args, 'output_file', str, f'output_{arity}_{now_date}_{now_time}'),
-            plot_folder=cls._construct_from_default(args, 'plot_folder', str, 'plots/'),
+            result_output_folder_name=cls._construct_from_default(args, 'result_name', str, f'output_{arity}_{now_date}_{now_time}'),
         )
         
     @staticmethod
@@ -71,5 +70,4 @@ class GlobalConfiguration:
         parser.add_argument('--results-folder', type=str, required=False, default=None, help='The directory containing temporary result files while the program runs')
         parser.add_argument('--results-suffix', type=str, required=False, default=None, help='What to append to the result files')
         parser.add_argument('--output-folder', type=str, required=False, default=None, help='The directory containing result files after the program terminates')
-        parser.add_argument('--output-file', type=str, required=False, default=None, help='The name of the file that contains the output, without folder and extension')
-        parser.add_argument('--plot-folder', type=str, required=False, default=None, help='The directory containing result plots after the program terminates')
+        parser.add_argument('--result-name', type=str, required=False, default=None, help='The name of the run. Used to generate the output folder.')

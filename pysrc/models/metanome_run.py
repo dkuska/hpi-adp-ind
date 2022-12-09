@@ -25,7 +25,6 @@ class MetanomeRunConfiguration:
     results_folder: str
     result_suffix: str
     output_folder: str
-    output_file: str
     clip_output: bool
     header: bool
     print_inds: bool
@@ -35,7 +34,7 @@ class MetanomeRunConfiguration:
 
     def __hash__(self) -> int:
         return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir, tuple(self.source_files), self.tmp_folder, self.results_folder,
-        self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
+        self.result_suffix, self.output_folder, self.clip_output, self.header, self.print_inds, self.create_plots, self.is_baseline))
 
 
 @dataclass(frozen=True)
