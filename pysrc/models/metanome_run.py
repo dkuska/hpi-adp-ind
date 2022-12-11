@@ -35,7 +35,7 @@ class MetanomeRunConfiguration:
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
+        return hash((self.algorithm, self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
                      self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
@@ -158,7 +158,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
     for line in lines:
         line_json = json.loads(line)
-        error: list[ErrorMetric] = []
+        errors: list[MissingValues] = []
         if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
@@ -172,9 +172,9 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
             if algorithm == 'PartialSPIDER':
                 missing_values = line_json["missingValues"]
-                error.append(MissingValues(missing_values))
+                errors.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
+            ind = IND(dependents=[dependant], referenced=[referenced], errors=errors)
             # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
         elif arity == 'unary' and is_baseline == False:
@@ -190,9 +190,9 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
             if algorithm == 'PartialSPIDER':
                 missing_values = line_json["missingValues"]
-                error.append(MissingValues(missing_values))
+                errors.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
-            ind = IND(dependents=[dependant], referenced=[referenced], errors=error)
+            ind = IND(dependents=[dependant], referenced=[referenced], errors=errors)
 
         elif arity == 'nary' and is_baseline == True:
             dependant_list: list[ColumnInformation] = []
