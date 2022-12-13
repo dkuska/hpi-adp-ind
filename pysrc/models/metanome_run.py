@@ -235,7 +235,7 @@ def parse_results(result_file_name: str, arity: str, results_folder: str, print_
     return MetanomeRunResults(ind_list)
 
 
-def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> MetanomeRun:
+def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool) -> MetanomeRun:
     # Make these configurable
     metanome_cli_path = 'metanome-cli.jar'
     algorithm_path = 'BINDER.jar'
@@ -257,7 +257,9 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                     -o {output_rule} \
                     --escape {escape} \
                     --algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
-    if configuration.clip_output:
+    if pipe:
+        execute_str += ' | tail -n 0'
+    elif configuration.clip_output:
         execute_str += ' | tail -n 2'
     # Run
     os.system(execute_str)

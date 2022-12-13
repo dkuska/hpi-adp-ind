@@ -27,6 +27,8 @@ class GlobalConfiguration:
 
     result_output_folder_name: str
 
+    pipe: bool
+
     T = TypeVar('T')
 
     @staticmethod
@@ -54,6 +56,7 @@ class GlobalConfiguration:
             results_suffix=cls._construct_from_default(args, 'results_suffix', str, '_inds'),
             output_folder=cls._construct_from_default(args, 'output_folder', str, 'output/'),
             result_output_folder_name=cls._construct_from_default(args, 'result_name', str, f'output_{arity}_{now_date}_{now_time}'),
+            pipe=cls._construct_from_default(args, 'pipe', bool, False)
         )
         
     @staticmethod
@@ -71,3 +74,4 @@ class GlobalConfiguration:
         parser.add_argument('--results-suffix', type=str, required=False, default=None, help='What to append to the result files')
         parser.add_argument('--output-folder', type=str, required=False, default=None, help='The directory containing result files after the program terminates')
         parser.add_argument('--result-name', type=str, required=False, default=None, help='The name of the run. Used to generate the output folder.')
+        parser.add_argument('--pipe', action=BooleanOptionalAction, required=False, default=False, help='Whether to allow piping the output directly to the evaluation script')
