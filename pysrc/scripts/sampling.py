@@ -58,8 +58,8 @@ def sample_csv(file_path: str,
 
             if config.header:
                 file.writelines(sampled_data.to_csv(index=False, sep=';', lineterminator='\n'))
-
-            file.writelines(sampled_data.to_csv(index=False, header=False, sep=';', lineterminator='\n'))
+            else:
+                file.writelines(sampled_data.to_csv(index=False, header=False, sep=';', lineterminator='\n'))
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
         samples.append(out_tuple)

@@ -7,13 +7,19 @@ from typing import Callable
 def random_sample(data: list[list[str]],
                   num_samples: int,
                   num_entries: int) -> list[str]:
-    return random.sample(data[0], k=num_samples)
+    tmp = pd.DataFrame(data[0])
+    tmp = tmp.replace(r'^s*$', float('NaN'), regex=True)
+    tmp = tmp.dropna(inplace=True)
+
+    return tmp.sample(n=num_samples)
 
 
 def first_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> list[str]:
-    return data[0][:num_samples]
+    tmp = pd.DataFrame(data[0])
+
+    return tmp.iloc[:num_samples]
 
 #TODO Alle funktionen auf DataFrames umstellen sortieren und danach Empty Strings löschen führt zu mglw leereb Samples
 def smallest_value_sample(data: list[list[str]],
@@ -27,14 +33,48 @@ def smallest_value_sample(data: list[list[str]],
 
     return out.iloc[:num_samples]
 
+def biggest_value_sample(data: list[list[str]],
+                 num_samples: int,
+                 num_entries: int) -> list[str]:
+    tmp = pd.DataFrame(data[0])
+    tmp = tmp.replace(r'^s*$', float('NaN'), regex=True)
+    tmp.dropna(inplace=True)
+    for col in tmp.columns:
+        out = tmp.sort_values(by=col, ascending=False)
+
+    return out.iloc[:num_samples]
+
+def longest_value_sample(data: list[list[str]],
+                 num_samples: int,
+                 num_entries: int) -> list[str]:
+    tmp = pd.DataFrame(data[0])
+    tmp = tmp.replace(r'^s*$', float('NaN'), regex=True)
+    tmp.dropna(inplace=True)
+    tmp.index = tmp[0].str.len()
+    df = tmp.sort_index(ascending=False).reset_index(drop=True)
+
+    return df.iloc[:num_samples]
+
+def shortest_value_sample(data: list[list[str]],
+                 num_samples: int,
+                 num_entries: int) -> list[str]:
+    tmp = pd.DataFrame(data[0])
+    tmp = tmp.replace(r'^s*$', float('NaN'), regex=True)
+    tmp.dropna(inplace=True)
+    tmp.index = tmp[0].str.len()
+    df = tmp.sort_index(ascending=True).reset_index(drop=True)
+
+    return df.iloc[:num_samples]
+
 
 def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
                          num_entries: int) -> list[str]:
     space_width = math.ceil(num_entries / num_samples)
     starting_index = random.randint(0, space_width)
+    tmp = pd.DataFrame(data[0])
     return [
-        data[0][i % num_entries]
+        tmp.iloc[i % num_entries]
         for i
         in range(starting_index, num_entries+space_width, space_width)]
 
@@ -46,4 +86,6 @@ sampling_methods_dict: dict[str,
     'first': first_sample,
     'evenly-spaced': evenly_spaced_sample,
     'smallest-value': smallest_value_sample,
+    'biggest-value': biggest_value_sample,
+    'longest-value': longest_value_sample
 }
