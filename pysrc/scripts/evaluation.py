@@ -70,6 +70,10 @@ def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) ->
         
         return df_unary, df_nary
     else:
+        # NOTE: This is a temporary fix and only works if we use only a single sampling method and rate per experiment
+        df['sampling_rate'] = df['sampling_rate'].map(lambda x: x.split('; ')[0])
+        df['sampling_method'] = df['sampling_method'].map(lambda x: x.split('; ')[0])
+        
         return df, None
 
 
