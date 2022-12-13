@@ -389,33 +389,19 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         methods.append(sampling_method)
         rates.append(sampling_rate)
 
-    # TODO: Clean up this code block above....
-    # Quick fix to make plots prettier
-    method, rate = methods[0], rates[0]
-
     if run.configuration.arity == 'unary':
         tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
-        return [method, rate, str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
-        # NOTE: Old Version - Return Methods and rates for each file
-        # return ['; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
 
-        return [method,
-                rate,
-                '; '.join([str(tp_i) for tp_i in tp]),
-                '; '.join([str(fp_i) for fp_i in fp]),
-                '; '.join([str(fn_i) for fn_i in fn]),
-                '; '.join([f'{precision_i:.3f}' for precision_i in precision]),
-                '; '.join([f'{recall_i:.3f}' for recall_i in recall]),
+        return ['; '.join(file_names),
+                '; '.join(methods),\
+                '; '.join(rates), \
+                '; '.join([str(tp_i) for tp_i in tp]), \
+                '; '.join([str(fp_i) for fp_i in fp]), \
+                '; '.join([str(fn_i) for fn_i in fn]), \
+                '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
+                '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
                 '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
-        # NOTE: Old Version - Return Methods and rates for each file
-        # return ['; '.join(methods),\
-        #         '; '.join(rates), \
-        #         '; '.join([str(tp_i) for tp_i in tp]), \
-        #         '; '.join([str(fp_i) for fp_i in fp]), \
-        #         '; '.join([str(fn_i) for fn_i in fn]), \
-        #         '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
-        #         '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
-        #         '; '.join([f'{f1_i:.3f}' for f1_i in f1])]

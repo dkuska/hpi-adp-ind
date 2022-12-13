@@ -35,7 +35,7 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folde
 
     with open(output_csv, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
-        writer.writerow(['sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
+        writer.writerow(['file_names', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
 
         baseline: MetanomeRun = runs.baseline
 
