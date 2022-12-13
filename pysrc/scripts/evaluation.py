@@ -2,6 +2,7 @@ import argparse
 import csv
 import json
 import os
+import sys
 from typing import Callable, Literal, Optional
 
 import matplotlib
@@ -140,7 +141,7 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file', type=str, required=True, help='The JSON file containing the experiment information to be evaluated')
+    parser.add_argument('--file', type=str, required=False, default=None, help='The JSON file containing the experiment information to be evaluated')
     parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the error metrics (`error`)')
     parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
     GlobalConfiguration.argparse_arguments(parser)
@@ -148,17 +149,17 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Optional[str]:
-    experiments: MetanomeRunBatch = load_experiment_information(json_file=args.file)
+def run_evaluation(config: GlobalConfiguration, file: str, interactive: str, return_path: str) -> Optional[str]:
+    experiments: MetanomeRunBatch = load_experiment_information(json_file=file)
     
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
-    output_sub_directory = args.file.rsplit(os.sep, 1)[0]  # .rsplit('.', 1)[0]
+    output_sub_directory = file.rsplit(os.sep, 1)[0]  # .rsplit('.', 1)[0]
     
     csv_path = create_evaluation_csv(experiments, output_sub_directory)
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
-    error_path = collect_error_metrics(experiments, 'interactive' if args.interactive == True else 'file', output_sub_directory)
-    match args.return_path:
+    error_path = collect_error_metrics(experiments, 'interactive' if interactive == True else 'file', output_sub_directory)
+    match return_path:
         case 'csv':
             return csv_path
         case 'plot':
@@ -169,12 +170,22 @@ def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Opt
             return None
 
 
+def run_evaluations(config: GlobalConfiguration, args: argparse.Namespace) -> list[Optional[str]]:
+    if not config.pipe:
+        return [run_evaluation(config, args.file, args.interactive, args.return_path)]
+    return [run_evaluation(config, file.rstrip(), args.interactive, args.return_path) for file in sys.stdin.read().split('\0')]
+
+
 def main():
     args = parse_args()
     config = GlobalConfiguration.default(vars(args))
-    result_paths = run_evaluation(config, args)
-    if result_paths:
-        print(result_paths)
+    if not config.pipe and args.file is None or config.pipe and args.file is not None:
+        print('Must be either in pipe mode or receive a file argument')
+        exit(1)
+    result_paths = run_evaluations(config, args)
+    for result_path in result_paths:
+        if result_path:
+            print(result_path)
 
 
 if __name__ == '__main__':
