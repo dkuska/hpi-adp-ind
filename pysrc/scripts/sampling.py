@@ -8,6 +8,8 @@ import uuid
 import pandas as pd
 import numpy as np
 
+from pathlib import Path
+
 from collections import defaultdict
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
@@ -72,13 +74,15 @@ def sample_csv(file_path: str,
 
 
 def create_result_json(runs: MetanomeRunBatch,
-                       output_file: str,
                        config: GlobalConfiguration) -> str:
     """Creates and writes to a JSON file containing information
     about the set of experiments. Returns the file name."""
 
-    output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
-    output_json = f'{output_path}.json'
+    output_path = os.path.join(os.getcwd(), config.output_folder, config.result_output_folder_name)
+    Path(output_path).mkdir(parents=True, exist_ok=True)
+    # output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
+    output_json = f'{output_path}{os.sep}data.json'
+    # output_json = f'{output_path}.json'
 
     with open(output_json, 'w', encoding='utf-8') as json_file:
         json.dump(runs, json_file,
@@ -178,7 +182,6 @@ def run_experiments(config: GlobalConfiguration) -> str:
             results_folder=config.results_folder,
             result_suffix=config.results_suffix,
             output_folder=config.output_folder,
-            output_file=config.output_file,
             clip_output=config.clip_output,
             header=config.header,
             print_inds=config.print_inds,
@@ -223,7 +226,6 @@ def run_experiments(config: GlobalConfiguration) -> str:
             results_folder=config.results_folder,
             result_suffix=config.results_suffix,
             output_folder=config.output_folder,
-            output_file=config.output_file,
             clip_output=config.clip_output,
             header=config.header,
             print_inds=config.print_inds,
@@ -245,7 +247,7 @@ def run_experiments(config: GlobalConfiguration) -> str:
 
     experiment_batch = MetanomeRunBatch(runs=experiments)
 
-    return create_result_json(experiment_batch, config.output_file, config)
+    return create_result_json(experiment_batch, config)
 
 
 def parse_args() -> argparse.Namespace:

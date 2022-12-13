@@ -29,9 +29,9 @@ def load_experiment_information(json_file: str) -> MetanomeRunBatch:
         return batch
 
 
-def create_evaluation_csv(runs: MetanomeRunBatch, output_file: str, output_folder: str) -> str:
-    output_path = os.path.join(os.getcwd(), output_folder, output_file)
-    output_csv = f'{output_path}.csv'
+def create_evaluation_csv(runs: MetanomeRunBatch, output_folder: str) -> str:
+    output_path = os.path.join(os.getcwd(), output_folder)
+    output_csv = f'{output_path}{os.sep}data.csv'
 
     with open(output_csv, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
@@ -77,31 +77,33 @@ def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) ->
         return df, None
 
 
-def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) -> list[str]:
+def make_plots(output_file: str) -> list[str]:
     plot_paths = []
+
+    plot_prefix = f'{output_file}{os.sep}plot'
     
-    arity = 'unary' if 'unary' in output_file else 'nary'
+    arity = 'unary' if 'unary' in output_file.rsplit(os.sep, 1)[1] else 'nary'
     
-    df = pd.read_csv(os.path.join(os.getcwd(), config.output_folder, output_file + '.csv'))
+    df = pd.read_csv(os.path.join(output_file, 'data.csv'))
        
     # Preprocessing of DataFrames, df_nary is None if arity == 'unary'
     df_original, df_nary = plotting_preprocessing_evaluation_dataframe(df, arity)
     
     if arity == 'nary':
-        plot_fname = f'{output_file}_onionPlot.jpg'
+        plot_fname = f'{plot_prefix}_onionPlot.jpg'
         groupby_attributes = ['num_sampled_files']
-        onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_folder, plot_fname)
+        onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
         plot_paths.append(onionplot_path)
         
     groupby_attributes = ['sampling_method', 'sampling_rate']
-    plot_fname = f'{output_file}_stackedBarPlots_detailed.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
+    plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
+    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
     plot_paths.append(plot_path)
     
-    plot_fname = f'{output_file}_linePlots_detailed.jpg' 
-    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
+    plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
+    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
     plot_paths.append(plot_path)
-    
+   
     # groupby_attributes = ['num_sampled_files']
     # plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'
     # plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
@@ -114,7 +116,7 @@ def make_plots(output_file: str, plot_folder: str, config: GlobalConfiguration) 
     return plot_paths
 
 
-def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], config: GlobalConfiguration, output_file: str) -> str:
+def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str) -> str:
     tuples_to_remove = experiments.tuples_to_remove()
     if mode == 'interactive':
         print('### Tuples To Remove ###')
@@ -131,8 +133,8 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
             if error[0] + error[1] > 0.0
         })
     # Always print results in detail to a file
-    output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
-    output_json = f'{output_path}_with_errors.json'
+    output_path = os.path.join(os.getcwd(), output_folder)
+    output_json = f'{output_path}{os.sep}errors.json'
     with open(output_json, 'w', encoding='utf-8') as json_file:
         json.dump(experiments, json_file,
                  ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
@@ -154,12 +156,12 @@ def run_evaluation(config: GlobalConfiguration, args: argparse.Namespace) -> Opt
     experiments: MetanomeRunBatch = load_experiment_information(json_file=args.file)
     
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
-    output_file = args.file.rsplit('/',1)[-1].rsplit('.', 1)[0]
+    output_sub_directory = args.file.rsplit(os.sep, 1)[0]  # .rsplit('.', 1)[0]
     
-    csv_path = create_evaluation_csv(experiments, output_file, config.output_folder)
+    csv_path = create_evaluation_csv(experiments, output_sub_directory)
     if config.create_plots:
-        plot_paths = make_plots(output_file, config.plot_folder, config)
-    error_path = collect_error_metrics(experiments, 'interactive' if args.interactive == True else 'file', config, config.output_file)
+        plot_paths = make_plots(output_sub_directory)
+    error_path = collect_error_metrics(experiments, 'interactive' if args.interactive == True else 'file', output_sub_directory)
     match args.return_path:
         case 'csv':
             return csv_path

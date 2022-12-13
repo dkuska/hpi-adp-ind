@@ -26,7 +26,6 @@ class MetanomeRunConfiguration:
     results_folder: str
     result_suffix: str
     output_folder: str
-    output_file: str
     clip_output: bool
     header: bool
     print_inds: bool
