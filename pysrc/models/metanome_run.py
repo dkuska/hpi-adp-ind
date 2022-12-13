@@ -257,12 +257,14 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
+        missing_values = 1000 # TODO: Make this configurable and dependent on the sample size
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
     escape = '\\\\'
     output_rule = f'file:{output_fname}'
     allowed_gb: int = 6
+
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -283,8 +285,12 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
                         MAX_MEMORY_USAGE_PERCENTAGE:60,\
                         INPUT_ROW_LIMIT:-1,\
                         CLEAN_TEMP:true,\
-                        MEMORY_CHECK_FREQUENCY:100,\
-                        MAX_NUMBER_MISSING_VALUES:50'
+                        MEMORY_CHECK_FREQUENCY:100'
+        if not configuration.is_baseline:
+            execute_str += f',MAX_NUMBER_MISSING_VALUES:{missing_values}'
+        else:
+            execute_str += ',MAX_NUMBER_MISSING_VALUES:0'
+        
     if configuration.clip_output:
         execute_str += ' | tail -n 2'
 
