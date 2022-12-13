@@ -39,7 +39,7 @@ class GlobalConfiguration:
         algorithm = cls._construct_from_default(args, 'algorithm', str, ['BINDER', 'PartialSPIDER'][1])
         arity = cls._construct_from_default(args, 'arity', str, ['unary', 'nary'][0])
         now = cls._construct_from_default(args, 'now', datetime.datetime, datetime.datetime.now())
-        now_date = f'{now.year}{now.month:02d}{now.day}'
+        now_date = f'{now.year}{now.month:02d}{now.day:02d}'
         now_time = f'{now.hour}{now.minute:02d}{now.second:02d}'
         return cls(
             algorithm=algorithm,
