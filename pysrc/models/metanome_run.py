@@ -254,7 +254,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
     return MetanomeRunResults(ind_list)
 
 
-def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> MetanomeRun:
+def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool) -> MetanomeRun:
     # TODO: Make these configurable
     if configuration.algorithm == 'BINDER':
         algorithm_path = 'BINDER.jar'
