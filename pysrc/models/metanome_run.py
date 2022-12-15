@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 import statistics
 from typing import Iterator
 from pysrc.errors import tuples_to_remove
@@ -11,6 +12,7 @@ from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingVal
 from pysrc.models.ind import IND
 
 
+@dataclass_json
 @dataclass(frozen=True)
 class MetanomeRunConfiguration:
     """Contains configuration information about a Metanome run"""
@@ -40,6 +42,7 @@ class MetanomeRunConfiguration:
                      self.print_inds, self.create_plots, self.is_baseline))
 
 
+@dataclass_json
 @dataclass(frozen=True)
 class MetanomeRunResults:
     inds: list[IND]
@@ -91,12 +94,14 @@ class MetanomeRunResults:
         return hash((tuple(self.inds)))
 
 
+@dataclass_json
 @dataclass(frozen=True)
 class MetanomeRun:
     configuration: MetanomeRunConfiguration
     results: MetanomeRunResults
 
 
+@dataclass_json
 @dataclass(frozen=True)
 class MetanomeRunBatch:
     runs: list[MetanomeRun]

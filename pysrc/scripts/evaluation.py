@@ -25,7 +25,7 @@ from ..utils.plots import (create_onion_plot, create_plot,
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
     with open(json_file) as f:
         data = json.load(f, cls=EnhancedJSONDecoder)
-        batch = from_dict(MetanomeRunBatch, data)
+        batch = MetanomeRunBatch.from_dict(data)
         return batch
 
 
