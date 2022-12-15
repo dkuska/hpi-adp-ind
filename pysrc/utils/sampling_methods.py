@@ -66,7 +66,13 @@ def shortest_value_sample(data: list[list[str]],
 
     return df.iloc[:num_samples]
 
-
+#TODO rework that
+def all_distinct_sample(data: list[list[str]],
+                 num_samples: int,
+                 num_entries: int) -> list[str]:
+    tmp = pd.DataFrame(data[0])
+    tmp.loc[tmp.astype(str).drop_duplicates().index]
+    return tmp
 def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
                          num_entries: int) -> list[str]:
@@ -87,5 +93,6 @@ sampling_methods_dict: dict[str,
     'evenly-spaced': evenly_spaced_sample,
     'smallest-value': smallest_value_sample,
     'biggest-value': biggest_value_sample,
-    'longest-value': longest_value_sample
+    'longest-value': longest_value_sample,
+    'all-distinct': all_distinct_sample
 }
