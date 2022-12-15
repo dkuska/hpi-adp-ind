@@ -162,7 +162,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
     for line in lines:
         line_json = json.loads(line)
-        errors: list[MissingValues] = []
+        errors: list[ErrorMetric] = []
         if arity == 'unary' and is_baseline == True:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0]
