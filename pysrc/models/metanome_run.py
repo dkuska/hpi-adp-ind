@@ -183,12 +183,12 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
 
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
-            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
             dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
 
             referenced_raw = line_json['referenced']['columnIdentifiers'][0]
-            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+            referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
             referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
@@ -224,7 +224,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             dependant_list = []
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
-                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
+                dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
                 dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
                 # dependant_list.append(f'{dependant_table}.{dependant_column}')
@@ -236,6 +236,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
                 referenced_column = 'column' + str(
                     referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
@@ -295,7 +296,9 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str) -> 
         else:
             execute_str += ',MAX_NUMBER_MISSING_VALUES:0'
         
-    if configuration.clip_output:
+    if pipe:
+        execute_str += ' | tail -n 0'
+    elif configuration.clip_output:
         execute_str += ' | tail -n 2'
 
     # Run

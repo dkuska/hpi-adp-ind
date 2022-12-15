@@ -73,12 +73,12 @@ def sample_csv(file_path: str,
     return samples
 
 
-def create_result_json(runs: MetanomeRunBatch,
+def create_result_json(dataset: str, runs: MetanomeRunBatch,
                        config: GlobalConfiguration) -> str:
     """Creates and writes to a JSON file containing information
     about the set of experiments. Returns the file name."""
 
-    output_path = os.path.join(os.getcwd(), config.output_folder, config.result_output_folder_name)
+    output_path = os.path.join(os.getcwd(), config.output_folder, dataset, config.result_output_folder_name)
     Path(output_path).mkdir(parents=True, exist_ok=True)
     # output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
     output_json = f'{output_path}{os.sep}data.json'
@@ -142,16 +142,17 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
     return datatype_tuples
 
 
-def run_experiments(config: GlobalConfiguration) -> str:
-    """Run experiments and return path to JSON"""
+def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
+    """Run experiments and return path to JSON for one dataset"""
     clean_tmp_csv(config.tmp_folder)
     clean_results(config.results_folder)
 
     experiments: list[MetanomeRun] = []
+    source_dir = os.path.join(os.getcwd(), config.source_dir, dataset)
     source_files = [
-        os.path.join(os.getcwd(), config.source_dir, f)
+        os.path.join(source_dir, f)
         for f
-        in os.listdir(os.path.join(os.getcwd(), config.source_dir))
+        in os.listdir(source_dir)
         if f.rsplit('.')[1] == 'csv'
     ]
 
@@ -242,12 +243,21 @@ def run_experiments(config: GlobalConfiguration) -> str:
             print(f'{current_files_str=}')
             print(f'{output_file_name=}')
         # Execute
-        result = run_metanome(configuration, output_file_name)
+        result = run_metanome(configuration, output_file_name, config.pipe)
         experiments.append(result)
 
     experiment_batch = MetanomeRunBatch(runs=experiments)
 
-    return create_result_json(experiment_batch, config)
+    return create_result_json(dataset, experiment_batch, config)
+
+
+def run_dataset_experiments(config: GlobalConfiguration) -> list[str]:
+    """Run experiments for each dataset in the source folder"""
+    return [
+        run_experiments(dataset, config)
+        for dataset
+        in os.listdir(os.path.join(os.getcwd(), config.source_dir))
+    ]
 
 
 def parse_args() -> argparse.Namespace:
@@ -260,8 +270,12 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     config = GlobalConfiguration.default(vars(args))
-    json_file_path = run_experiments(config)
-    print(f'JSON: {json_file_path}')
+    json_file_paths = run_dataset_experiments(config)
+    json_file_paths_string = ('\0' if config.pipe else '\n').join(json_file_paths)
+    if args.pipe:
+        print(json_file_paths_string)
+    else:
+        print(f'JSON files:\n{json_file_paths_string}')
 
 
 if __name__ == '__main__':
