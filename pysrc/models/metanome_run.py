@@ -38,7 +38,7 @@ class MetanomeRunConfiguration:
     def __hash__(self) -> int:
         return hash((self.algorithm, self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
-                     self.result_suffix, self.output_folder, self.output_file, self.clip_output, self.header,
+                     self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
 
 
