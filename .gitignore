@@ -1,5 +1,7 @@
 *.csv
 *.jar
+*.java
+*.odp
 BINDER_temp/*
 results/*
 src

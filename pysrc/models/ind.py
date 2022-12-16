@@ -1,9 +1,11 @@
 from dataclasses import dataclass, field
+from dataclasses_json import dataclass_json
 
 from pysrc.models.column_information import ColumnInformation
 from pysrc.models.errors import ErrorMetric
 
 
+@dataclass_json
 @dataclass(frozen=True)
 class IND:
     """Represents a single, nary ind"""

@@ -26,7 +26,7 @@ from ..utils.plots import (create_onion_plot, create_plot,
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
     with open(json_file) as f:
         data = json.load(f, cls=EnhancedJSONDecoder)
-        batch = from_dict(MetanomeRunBatch, data)
+        batch = MetanomeRunBatch.from_dict(data)
         return batch
 
 
@@ -36,7 +36,7 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_folder: str) -> str:
 
     with open(output_csv, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
-        writer.writerow(['sampled_files', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
+        writer.writerow(['file_names', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
 
         baseline: MetanomeRun = runs.baseline
 
@@ -50,18 +50,18 @@ def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) ->
     """After loading the data from the evaluation csv, some preprocessing needs to be done, before we can create plots
     """
     # Count how many files were in the source and how many were sampled
-    num_files = len(df['sampled_files'].tolist()[0].split(';'))
-    df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
+    # num_files = len(df['sampled_files'].tolist()[0].split(';'))
+    # df = df.assign(num_sampled_files= lambda x: num_files - (x['sampling_method'].str.count('None')))
     
     if arity == 'nary':
         df_nary = df.copy(deep=True)
         # TODO: is there a way to make this prettier?.....
         df_unary = df.assign(tp = lambda x: x['tp'].str.split('; ').tolist(),
-                                 fp = lambda x: x['fp'].str.split('; '),
-                                 fn = lambda x: x['fn'].str.split('; '),
-                                 precision = lambda x: x['precision'].str.split('; '),
-                                 recall = lambda x: x['recall'].str.split('; '),
-                                 f1 = lambda x: x['f1'].str.split('; '))
+                             fp = lambda x: x['fp'].str.split('; '),
+                             fn = lambda x: x['fn'].str.split('; '),
+                             precision = lambda x: x['precision'].str.split('; '),
+                             recall = lambda x: x['recall'].str.split('; '),
+                             f1 = lambda x: x['f1'].str.split('; '))
         df['tp']        = df['tp'].map(lambda x: sum([int(i) for i in x]))
         df['fp']        = df['fp'].map(lambda x: sum([int(i) for i in x]))
         df['fn']        = df['fn'].map(lambda x: sum([int(i) for i in x]))
@@ -71,6 +71,10 @@ def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) ->
         
         return df_unary, df_nary
     else:
+        # NOTE: This is a temporary fix and only works if we use only a single sampling method and rate per experiment
+        df['sampling_rate'] = df['sampling_rate'].map(lambda x: x.split('; ')[0])
+        df['sampling_method'] = df['sampling_method'].map(lambda x: x.split('; ')[0])
+        
         return df, None
 
 
@@ -100,15 +104,15 @@ def make_plots(output_file: str) -> list[str]:
     plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
     plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
     plot_paths.append(plot_path)
+   
+    # groupby_attributes = ['num_sampled_files']
+    # plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'
+    # plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_folder, plot_fname)
+    # plot_paths.append(plot_path)
     
-    groupby_attributes = ['num_sampled_files']
-    plot_fname = f'{plot_prefix}_stackedBarPlots_simplified.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
-    plot_paths.append(plot_path)
-    
-    plot_fname = f'{plot_prefix}_linePlots_simplified.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
-    plot_paths.append(plot_path)
+    # plot_fname = f'{output_file}_linePlots_simplified.jpg' 
+    # plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_folder, plot_fname)
+    # plot_paths.append(plot_path)
     
     return plot_paths
 
