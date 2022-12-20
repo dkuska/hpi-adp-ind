@@ -1,6 +1,5 @@
 """ This file is NOT USED currently. """
 
-import csv
 import os
 
 import numpy as np
