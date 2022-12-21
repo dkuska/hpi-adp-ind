@@ -9,7 +9,7 @@ def random_sample(data: list[list[str]],
                   num_entries: int) -> list[str]:
     tmp = pd.DataFrame(data[0])
     tmp = tmp.replace(r'^s*$', float('NaN'), regex=True)
-    tmp = tmp.dropna(inplace=True)
+    #tmp = tmp.dropna(inplace=True)
 
     return tmp.sample(n=num_samples)
 
@@ -71,18 +71,20 @@ def all_distinct_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> list[str]:
     tmp = pd.DataFrame(data[0])
-    tmp.loc[tmp.astype(str).drop_duplicates().index]
-    return tmp
+    df = tmp.loc[tmp.astype(str).drop_duplicates().index]
+
+
+    return df.iloc[:num_samples]
+
+#TODO Return Type is messed up
 def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
                          num_entries: int) -> list[str]:
     space_width = math.ceil(num_entries / num_samples)
     starting_index = random.randint(0, space_width)
     tmp = pd.DataFrame(data[0])
-    return [
-        tmp.iloc[i % num_entries]
-        for i
-        in range(starting_index, num_entries+space_width, space_width)]
+    out = [tmp.iloc[i % num_entries] for i in range(starting_index, num_entries+space_width, space_width)]
+    return pd.DataFrame(out)
 
 
 sampling_methods_dict: dict[str,

@@ -62,10 +62,11 @@ def sample_csv(file_path: str,
 
             empty_str = ''
             # Changed for better readability
-            for out_row in sampled_data:
-                if out_row == empty_str:
+            for out_row in range(0, len(sampled_data)):
+                #TODO Filter for empty lines didnt work anymore
+                if sampled_data.iloc[out_row, 0] == empty_str:
                     continue
-                writer.writerow([out_row])
+                writer.writerow([sampled_data.iloc[out_row, 0]])
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
         samples.append(out_tuple)
