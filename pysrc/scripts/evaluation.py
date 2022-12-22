@@ -113,6 +113,9 @@ def make_plots(output_file: str) -> list[str]:
 
 
 def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str) -> str:
+    if mode == 'interactive':
+        print('Error metrics collection is (temporarily) disabled for performance reasons')
+    return ''
     tuples_to_remove = experiments.tuples_to_remove()
     if mode == 'interactive':
         print('### Tuples To Remove ###')
@@ -148,7 +151,7 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
-def run_evaluation(config: GlobalConfiguration, file: str, interactive: str, return_path: str) -> Optional[str]:
+def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, return_path: str) -> Optional[str]:
     experiments: MetanomeRunBatch = load_experiment_information(json_file=file)
     
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
@@ -157,7 +160,7 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: str, ret
     csv_path = create_evaluation_csv(experiments, output_sub_directory)
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
-    error_path = collect_error_metrics(experiments, 'interactive' if interactive == True else 'file', output_sub_directory)
+    error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
     match return_path:
         case 'csv':
             return csv_path
