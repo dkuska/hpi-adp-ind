@@ -160,11 +160,15 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     configurations: list[MetanomeRunConfiguration] = []
 
     # Calculate column statistics for the input files
-    # TODO: Figure out what to do with them...
+    # TODO: Figure out what to do with them. Should probabily be passed onto the sample_csv to help determine sampling rate
     source_files_column_statistics = [file_column_statistics(f) for f in source_files]
+    # DEBUG
+    for x in source_files_column_statistics:
+        for y in x:
+            print(y)
+    
     
     # Baseline
-    # TODO: Find clever way for column based sampling
     baseline_set: list[list[tuple[str, str, float]]] = [
         [(src_file, 'None', 1.0)]
         for src_file
