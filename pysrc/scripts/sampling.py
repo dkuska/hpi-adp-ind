@@ -16,6 +16,7 @@ from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    MetanomeRunConfiguration, run_metanome)
 from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 from ..utils.sampling_methods import sampling_methods_dict
+from ..utils.descriptive_statistics import file_column_statistics
 
 
 def sample_csv(file_path: str,
@@ -158,6 +159,10 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
 
     configurations: list[MetanomeRunConfiguration] = []
 
+    # Calculate column statistics for the input files
+    # TODO: Figure out what to do with them...
+    source_files_column_statistics = [file_column_statistics(f) for f in source_files]
+    
     # Baseline
     # TODO: Find clever way for column based sampling
     baseline_set: list[list[tuple[str, str, float]]] = [
