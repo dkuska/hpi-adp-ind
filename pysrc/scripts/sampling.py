@@ -33,12 +33,12 @@ def sample_csv(file_path: str,
     # Initializes the dict with value for no key present
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
-    with open(file_path, 'r') as f:
-        reader = csv.reader(f, delimiter=';', escapechar='\\')
-        for row in reader:
-            for i in range(len(row)):
-                # aggregates the data per line while reading file line by line
-                aggregate_data_per_column[i].append(row[i])
+    # Read input file into dataframe and cast all columns into strings
+    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str')
+    
+    # Cast each column into a list
+    for column_index, column in enumerate(source_df.columns):
+        aggregate_data_per_column[column_index] = source_df[column].to_list()
 
     for column in aggregate_data_per_column:
 
@@ -105,7 +105,7 @@ def clean_results(results_folder: str) -> None:
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
-
+# NOTE: NOT IN USE CURRENTLY
 def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
         -> list[list[tuple[str, str, float]]]:
     data_type_dict: dict[str, list[tuple[int, int]]] = {}
