@@ -53,7 +53,7 @@ def sample_csv(file_path: str,
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
-        sampled_data = sampling_method_function([aggregate_data_per_column[column]], num_samples, num_entries)
+        sampled_data = sampling_method_function(aggregate_data_per_column[column], num_samples, num_entries)
 
         with open(new_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')
@@ -62,11 +62,11 @@ def sample_csv(file_path: str,
 
             empty_str = ''
             # Changed for better readability
-            for out_row in range(0, len(sampled_data)):
-                #TODO Filter for empty lines didnt work anymore
-                if sampled_data.iloc[out_row, 0] == empty_str:
+            for row_index in range(0, len(sampled_data)):
+                #TODO Create Testcases to check if this always works
+                if sampled_data.iloc[row_index] == empty_str:
                     continue
-                writer.writerow([sampled_data.iloc[out_row, 0]])
+                writer.writerow([sampled_data.iloc[row_index]])
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
         samples.append(out_tuple)
