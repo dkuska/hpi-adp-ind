@@ -87,8 +87,9 @@ def create_result_json(dataset: str, runs: MetanomeRunBatch,
     # output_json = f'{output_path}.json'
 
     with open(output_json, 'w', encoding='utf-8') as json_file:
-        json.dump(runs, json_file,
-                  ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
+        json_file.write(runs.to_json())
+        # json.dump(runs, json_file,
+        #           ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
 
     return output_json
 

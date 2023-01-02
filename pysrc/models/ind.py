@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from typing import Optional
 from dataclasses_json import dataclass_json
 
 from pysrc.models.column_information import ColumnInformation
@@ -24,3 +25,11 @@ class IND:
     
     def arity(self) -> int:
         return len(self.dependents)
+
+
+@dataclass_json
+@dataclass(frozen=True)
+class RankedIND:
+    ind: IND
+    credibility: float
+    is_tp: Optional[bool]
