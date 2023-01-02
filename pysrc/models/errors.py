@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from typing import Literal
 from dataclasses_json import dataclass_json
 
+@dataclass_json
 class ErrorMetric(ABC):
     pass
 
