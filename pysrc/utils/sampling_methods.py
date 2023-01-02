@@ -4,7 +4,7 @@ import pandas as pd
 from typing import Callable
 
 def replaceEmptyField(series: pd.Series) -> pd.Series:
-    return series.replace(r'^s*$', float('NaN'), regex=True)
+    return series.replace(r'\^s*$', float('NaN'), regex=True)
 
 
 def random_sample(data: list[list[str]],
