@@ -1,11 +1,13 @@
 import argparse
 import csv
+from dataclasses import dataclass
 import json
 import os
 import sys
 from typing import Literal, Optional
 
 import pandas as pd
+from pysrc.models.ind import IND, RankedIND
 
 from pysrc.utils.enhanced_json_encoder import (EnhancedJSONDecoder,
                                                EnhancedJSONEncoder)
@@ -21,7 +23,7 @@ from ..utils.plots import (create_onion_plot, create_plot,
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
     with open(json_file) as f:
         data = json.load(f, cls=EnhancedJSONDecoder)
-        batch = MetanomeRunBatch.from_dict(data)
+        batch: MetanomeRunBatch = MetanomeRunBatch.from_dict(data)
         return batch
 
 
@@ -141,17 +143,67 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
     return output_json
 
 
+def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str, top_inds: int) -> str:
+    ranked_inds = experiments.ranked_inds()
+    baseline = experiments.baseline
+    ranked_inds_object = [RankedIND(ind, credibility, baseline.results.has_ind(ind)) for ind, credibility in ranked_inds.items()]
+    if mode == 'interactive':
+        sorted_ranked_inds = sorted(ranked_inds_object, key=lambda ranked_ind : ranked_ind.credibility, reverse=True)
+        # print(sorted_ranked_inds)
+        n = 0
+        for ranked_ind in sorted_ranked_inds:
+            if n >= top_inds and top_inds >= 0:
+                break
+            n += 1
+            print(f'{ranked_ind.credibility=} ({ranked_ind.is_tp=}): {ranked_ind.ind=}')
+    output_path = os.path.join(os.getcwd(), output_folder)
+    output_json = f'{output_path}{os.sep}ranked_inds.json'
+    with open(output_json, 'w', encoding='utf-8') as json_file:
+        json_file.write(RankedIND.schema().dumps(ranked_inds_object, many=True))
+        # json.dump(ranked_inds_object, json_file, ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
+
+    return output_json
+
+
+def evaluate_ind_rankings(ranked_inds_path: str, maximum_threshold_percentage: float) -> None:
+    ranked_inds: list[RankedIND] = []
+    with open(ranked_inds_path, 'r', encoding='utf-8') as json_file:
+        ranked_inds = RankedIND.schema().loads(json_file.read(), many=True)
+    if len(ranked_inds) < 1:
+        print('No INDs available to be ranked.')
+        return
+    max_credibility = max(ranked_inds, key=lambda ranked_ind : ranked_ind.credibility).credibility
+    tps, fps, tns, fns = 0, 0, 0, 0
+    for ranked_ind in ranked_inds:
+        if ranked_ind.credibility >= maximum_threshold_percentage * max_credibility:
+            if ranked_ind.is_tp is None:
+                continue
+            if ranked_ind.is_tp: tps += 1
+            else: fps += 1
+        else:
+            if ranked_ind.is_tp is None:
+                continue
+            if ranked_ind.is_tp: fns += 1
+            else: tns += 1
+    total_number_of_inds = len(ranked_inds)
+    accuracy = round((tps + tns) / total_number_of_inds, 5)
+    precision = round(tps / (tps + fps), 5)
+    recall = round(tps / (tps + fns), 5)
+    print(f'For {maximum_threshold_percentage=}: {tps=}, {fps=}, {fns=}, {tns=} -> {accuracy=}, {precision=}, {recall=}')
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False, default=None, help='The JSON file containing the experiment information to be evaluated')
-    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the error metrics (`error`)')
+    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), of the error metrics (`error`), or of the ranked inds (`ranked`)')
     parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
+    parser.add_argument('--top-inds', type=int, default=-1, help='The number of INDs (from the top ranking) that should be shown. A negative number shows all.')
     GlobalConfiguration.argparse_arguments(parser)
     args = parser.parse_args()
     return args
 
 
-def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, return_path: str) -> Optional[str]:
+def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, return_path: str, top_inds: int) -> Optional[str]:
     experiments: MetanomeRunBatch = load_experiment_information(json_file=file)
     
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
@@ -161,6 +213,11 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
     error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
+    ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
+    if interactive:
+        thresholds = [1.0, 0.9999, 0.9995, 0.999, 0.995, 0.99, 0.95, 0.9, 0.8, 0.75, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.1, 0.01, 0.0]
+        for threshold in thresholds:
+            evaluate_ind_rankings(ranked_inds_path, threshold)
     match return_path:
         case 'csv':
             return csv_path
@@ -168,14 +225,16 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
             return ', '.join(plot_paths)
         case 'error':
             return error_path
+        case 'ranked':
+            return ranked_inds_path
         case _:
             return None
 
 
 def run_evaluations(config: GlobalConfiguration, args: argparse.Namespace) -> list[Optional[str]]:
     if not config.pipe:
-        return [run_evaluation(config, args.file, args.interactive, args.return_path)]
-    return [run_evaluation(config, file.rstrip(), args.interactive, args.return_path) for file in sys.stdin.read().split('\0')]
+        return [run_evaluation(config, args.file, args.interactive, args.return_path, args.top_inds)]
+    return [run_evaluation(config, file.rstrip(), args.interactive, args.return_path, args.top_inds) for file in sys.stdin.read().split('\0')]
 
 
 def main():
