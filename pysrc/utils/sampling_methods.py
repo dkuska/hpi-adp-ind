@@ -85,7 +85,7 @@ def evenly_spaced_sample(data: list[list[str]],
 
 sampling_methods_dict: dict[str,
                             Callable[[list[list[str]], int, int],
-                                     list[str]]] = {
+                                     pd.Series]] = {
     'random': random_sample,
     'first': first_sample,
     'evenly-spaced': evenly_spaced_sample,

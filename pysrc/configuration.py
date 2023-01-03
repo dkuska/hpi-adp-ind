@@ -36,6 +36,7 @@ class GlobalConfiguration:
     def _construct_from_default(args: dict[str, Any], key: str, required_type: type, default: T) -> T:
         return args[key] if key in args and isinstance(args[key], required_type) else default
 
+
     @classmethod
     def default(cls, args: dict[str, Any]):
         algorithm = cls._construct_from_default(args, 'algorithm', str, ['BINDER', 'PartialSPIDER'][1])
@@ -47,7 +48,7 @@ class GlobalConfiguration:
             algorithm=algorithm,
             arity=arity,
             sampling_rates=[0.1, 0.01, 0.001],
-            sampling_methods=['random', 'first', 'evenly-spaced'],
+            sampling_methods=['all-distinct', 'smallest-value', 'longest-value', 'random', 'evenly-spaced', 'first', 'biggest-value'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),
             print_inds=cls._construct_from_default(args, 'print_inds', bool, False),
