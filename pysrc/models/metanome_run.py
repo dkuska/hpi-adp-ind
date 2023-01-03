@@ -10,6 +10,9 @@ from pysrc.errors import tuples_to_remove
 from pysrc.models.column_information import ColumnInformation
 from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingValues
 from pysrc.models.ind import IND
+from pysrc.models.column_statistics import ColumnStatistic
+
+from pysrc.utils.descriptive_statistics import file_column_statistics
 
 
 @dataclass_json
@@ -98,6 +101,7 @@ class MetanomeRunResults:
 @dataclass(frozen=True)
 class MetanomeRun:
     configuration: MetanomeRunConfiguration
+    column_statistics: list[ColumnStatistic]
     results: MetanomeRunResults
 
 
@@ -270,6 +274,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     output_rule = f'file:{output_fname}'
     allowed_gb: int = 6
 
+    # Calculate File Statistics
+    source_files_column_statistics = [file_column_statistics(f) for f in configuration.source_files]
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -310,7 +316,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                            results_folder=configuration.results_folder,
                            print_inds=configuration.print_inds,
                            is_baseline=configuration.is_baseline)
-    return MetanomeRun(configuration=configuration, results=result)
+    return MetanomeRun(configuration=configuration, column_statistics=source_files_column_statistics, results=result)
 
 
 # For unary INDs, this method returns absolute counts for TP, FP, FN, etc.

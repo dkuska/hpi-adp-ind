@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from ..models.column_statistics import ColumnStatistic
 
 def file_column_statistics(file_path, delimiter=';', escapechar='\\'):
@@ -20,8 +19,8 @@ def file_column_statistics(file_path, delimiter=';', escapechar='\\'):
         shortest = column_series.iloc[0]
         longest = column_series.iloc[count-1]
         
-        colStat = ColumnStatistic(count=count, 
-                                  unique_count=unique_count, 
+        colStat = ColumnStatistic(count=int(count), 
+                                  unique_count=int(unique_count), 
                                   unique_ratio=round(unique_count / count, 5),
                                   min=min,
                                   max=max,

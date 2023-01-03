@@ -1,7 +1,9 @@
 from dataclasses import dataclass
+from dataclasses_json import dataclass_json
 
-@dataclass
-class ColumnStatistic():
+@dataclass_json
+@dataclass(frozen=True)
+class ColumnStatistic:
     count: int
     unique_count: int
     unique_ratio: float
