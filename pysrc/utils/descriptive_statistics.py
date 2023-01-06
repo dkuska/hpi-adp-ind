@@ -1,7 +1,7 @@
 import pandas as pd
 from ..models.column_statistics import ColumnStatistic
 
-def file_column_statistics(file_path, delimiter=';', escapechar='\\'):
+def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str ='\\') -> list[ColumnStatistic]:
     descriptions = []
     df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip')
     
