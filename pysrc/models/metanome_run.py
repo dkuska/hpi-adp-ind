@@ -3,6 +3,7 @@ import json
 import os
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
+from itertools import chain
 import statistics
 from typing import Iterator
 from pysrc.errors import tuples_to_remove
@@ -275,7 +276,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb: int = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [file_column_statistics(f) for f in configuration.source_files]
+    source_files_column_statistics = [file_column_statistics(f, is_baseline=configuration.is_baseline) for f in configuration.source_files]
+    source_files_column_statistics = list(chain(*source_files_column_statistics)) # Concatenate subLists into a single mainList
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
