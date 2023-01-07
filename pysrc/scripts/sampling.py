@@ -63,7 +63,7 @@ def sample_csv(file_path: str,
             empty_str = ''
             # Changed for better readability
             for row_index in range(0, len(sampled_data)):
-                #TODO Create Testcases to check if this always works
+                #TODO Create Testcases to check if this always works should avoid wreiting empty lines into the sampled data
                 if sampled_data.iloc[row_index] == empty_str:
                     continue
                 writer.writerow([sampled_data.iloc[row_index]])
