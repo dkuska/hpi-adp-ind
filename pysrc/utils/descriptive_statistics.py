@@ -24,7 +24,7 @@ def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str 
         table_name = file_name.rsplit('__', 1)[0]
         column_name = 'column' + str(col_index + 1)
         
-        colStat = ColumnStatistic(column_Information=ColumnInformation(table_name=table_name, column_name=column_name),
+        col_stats = ColumnStatistic(column_Information=ColumnInformation(table_name=table_name, column_name=column_name),
                                   count=int(count), 
                                   unique_count=int(unique_count), 
                                   unique_ratio=round(unique_count / count, 5),
