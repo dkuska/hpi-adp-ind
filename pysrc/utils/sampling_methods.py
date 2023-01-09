@@ -3,19 +3,19 @@ import random
 import pandas as pd
 from typing import Callable
 
-def replaceEmptyField(series: pd.Series) -> pd.Series:
-    return series.replace(r'\^s*$', float('NaN'), regex=True)
-
+def preProcessData(series: pd.Series) -> pd.Series:
+    tmp = series.replace(r'\^s*$', float('NaN'), regex=True)
+    tmp.dropna(inplace=True)
+    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    return tmp
 
 def random_sample(data: list[list[str]],
                   num_samples: int,
                   num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
-    if len(tmp)-1 > num_samples:
+    if len(tmp) >= num_samples:
         return tmp.sample(n=num_samples)
     else:
         return tmp
@@ -24,11 +24,9 @@ def first_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
-    if len(tmp) - 1 > num_samples:
+    if len(tmp) >= num_samples:
         return tmp.iloc[:num_samples]
     else:
         return tmp
@@ -37,12 +35,10 @@ def smallest_value_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
     out = tmp.sort_values()
-    if len(out) - 1 > num_samples:
+    if len(out) >= num_samples:
         return out.iloc[:num_samples]
     else:
         return out
@@ -50,12 +46,10 @@ def biggest_value_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
     out = tmp.sort_values(ascending=False)
-    if len(out) - 1 > num_samples:
+    if len(out) >= num_samples:
         return out.iloc[:num_samples]
     else:
         return out
@@ -63,13 +57,11 @@ def longest_value_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
     tmp.index = tmp.str.len()
     df = tmp.sort_index(ascending=False).reset_index(drop=True)
-    if len(df) - 1 > num_samples:
+    if len(df) >= num_samples:
         return df.iloc[:num_samples]
     else:
         return df
@@ -78,13 +70,11 @@ def shortest_value_sample(data: list[list[str]],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
+    tmp = preProcessData(tmp)
 
     tmp.index = tmp[0].str.len()
     df = tmp.sort_index(ascending=True).reset_index(drop=True)
-    if len(df) - 1 > num_samples:
+    if len(df) >= num_samples:
         return df.iloc[:num_samples]
     else:
         return df
@@ -104,14 +94,11 @@ def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
                          num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
-    tmp = replaceEmptyField(tmp)
-    tmp.dropna(inplace=True)
-    tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
-    rate = num_samples / num_entries
-    num_samples_here = math.ceil(len(tmp) * rate)
-    space_width = math.ceil(len(tmp) / num_samples_here)
+    tmp = preProcessData(tmp)
+    space_width = math.ceil(len(tmp) / num_samples)
+    print(space_width)
     starting_index = random.randint(0, space_width)
-    out_indices = [i % num_entries for i in range(starting_index, num_samples_here + space_width - 1, space_width)]
+    out_indices = [i % len(tmp) for i in range(starting_index, num_samples + space_width -1, space_width)]
 
     out = tmp.iloc[out_indices]
     return out
