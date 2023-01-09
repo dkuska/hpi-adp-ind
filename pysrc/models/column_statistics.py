@@ -6,8 +6,7 @@ from .column_information import ColumnInformation
 @dataclass_json
 @dataclass(frozen=True)
 class ColumnStatistic:
-    
-    column_Information: ColumnInformation
+    column_information: ColumnInformation
     count: int
     unique_count: int
     unique_ratio: float
