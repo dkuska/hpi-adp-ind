@@ -276,8 +276,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb: int = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [file_column_statistics(f, is_baseline=configuration.is_baseline) for f in configuration.source_files]
-    source_files_column_statistics = list(chain(*source_files_column_statistics)) # Concatenate subLists into a single mainList
+    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, is_baseline=configuration.is_baseline)]
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
