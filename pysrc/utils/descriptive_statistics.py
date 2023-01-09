@@ -11,7 +11,7 @@ def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str 
         
         column_series.sort_values(inplace=True, ascending=True)
         count = column_series.count()
-        unique_count = len(column_series.unique())
+        unique_count = column_series.nunique()
         min = column_series.iloc[0]
         max = column_series.iloc[count-1]
         
@@ -24,7 +24,7 @@ def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str 
         table_name = file_name.rsplit('__', 1)[0]
         column_name = 'column' + str(col_index + 1)
         
-        col_stats = ColumnStatistic(column_Information=ColumnInformation(table_name=table_name, column_name=column_name),
+        col_stats = ColumnStatistic(column_information=ColumnInformation(table_name=table_name, column_name=column_name),
                                   count=int(count), 
                                   unique_count=int(unique_count), 
                                   unique_ratio=round(unique_count / count, 5),
@@ -32,6 +32,6 @@ def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str 
                                   max=max,
                                   shortest=shortest,
                                   longest=longest)
-        descriptions.append(colStat)
+        descriptions.append(col_stats)
         
     return descriptions    
