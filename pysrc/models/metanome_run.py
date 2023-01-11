@@ -9,7 +9,7 @@ from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
 from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingValues
-from pysrc.models.ind import IND
+from pysrc.models.ind import IND, ind_credibility
 from pysrc.models.column_statistics import ColumnStatistic
 
 from pysrc.utils.descriptive_statistics import file_column_statistics
@@ -178,13 +178,10 @@ class MetanomeRunBatch:
                 if clean_ind not in inds: inds[clean_ind] = []
                 inds[clean_ind].append((next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error), run))
         # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
+        baseline = self.baseline
         inds_credibilities = {
                 ind: [
-                    # (1000 - missing_values) * config.credibility()  # TODO: Verify sense of that. 1000 is constant max missing values number.
-                    # (1.0 - missing_values / maximum_missing_values) * config.credibility()  # TODO: Verify sense of that.
-                    # (1.0 - missing_values / 1000) * run.configuration.credibility()  # TODO: Verify sense of that. 1000 is constant max missing values number.
-                    (1.0 - missing_values / next(stat.unique_count for stat in run.column_statistics if stat.column_information in ind.dependents)) * run.configuration.credibility()  # TODO: Verify sense of that.
-                    # (maximum_missing_values - missing_values) * config.credibility()  # TODO: Verify sense of that.
+                    ind_credibility(ind, run, missing_values, baseline)
                     for missing_values, run
                     in configMissingValuesPairs
                     ]
