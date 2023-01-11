@@ -1,5 +1,6 @@
 import datetime
 import json
+from math import isnan
 import os
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
@@ -13,6 +14,7 @@ from pysrc.models.ind import IND
 from pysrc.models.column_statistics import ColumnStatistic
 
 from pysrc.utils.descriptive_statistics import file_column_statistics
+from pysrc.utils.ind_credibility import ind_credibility
 
 
 @dataclass_json
@@ -178,13 +180,10 @@ class MetanomeRunBatch:
                 if clean_ind not in inds: inds[clean_ind] = []
                 inds[clean_ind].append((next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error), run))
         # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
+        baseline = self.baseline
         inds_credibilities = {
                 ind: [
-                    # (1000 - missing_values) * config.credibility()  # TODO: Verify sense of that. 1000 is constant max missing values number.
-                    # (1.0 - missing_values / maximum_missing_values) * config.credibility()  # TODO: Verify sense of that.
-                    # (1.0 - missing_values / 1000) * run.configuration.credibility()  # TODO: Verify sense of that. 1000 is constant max missing values number.
-                    (1.0 - missing_values / next(stat.unique_count for stat in run.column_statistics if stat.column_information in ind.dependents)) * run.configuration.credibility()  # TODO: Verify sense of that.
-                    # (maximum_missing_values - missing_values) * config.credibility()  # TODO: Verify sense of that.
+                    ind_credibility(ind, run, missing_values, baseline)
                     for missing_values, run
                     in configMissingValuesPairs
                     ]
@@ -192,7 +191,7 @@ class MetanomeRunBatch:
                 in inds.items()
             }
         # Rank INDs by SUM over ALL runs (with value 0.0 for runs that didn't find the IND)
-        ranked_inds = { ind: sum(credibilities) for ind, credibilities in inds_credibilities.items() }
+        ranked_inds = { ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0 for ind, credibilities in inds_credibilities.items() }
         return ranked_inds
 
 

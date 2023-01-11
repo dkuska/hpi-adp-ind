@@ -175,7 +175,8 @@ def evaluate_ind_rankings(ranked_inds_path: str, maximum_threshold_percentage: f
     max_credibility = max(ranked_inds, key=lambda ranked_ind : ranked_ind.credibility).credibility
     tps, fps, tns, fns = 0, 0, 0, 0
     for ranked_ind in ranked_inds:
-        if ranked_ind.credibility >= maximum_threshold_percentage * max_credibility:
+        if maximum_threshold_percentage > 0.0 and ranked_ind.credibility >= maximum_threshold_percentage * max_credibility \
+            or maximum_threshold_percentage == 0.0 and ranked_ind.credibility > 0.0:
             if ranked_ind.is_tp is None:
                 continue
             if ranked_ind.is_tp: tps += 1
@@ -215,7 +216,7 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
     ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
     if interactive:
-        thresholds = [1.0, 0.9999, 0.9995, 0.999, 0.995, 0.99, 0.95, 0.9, 0.8, 0.75, 0.6, 0.5, 0.4, 0.3, 0.25, 0.2, 0.1, 0.01, 0.0]
+        thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]
         for threshold in thresholds:
             evaluate_ind_rankings(ranked_inds_path, threshold)
     match return_path:
