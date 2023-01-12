@@ -48,7 +48,7 @@ class GlobalConfiguration:
             algorithm=algorithm,
             arity=arity,
             sampling_rates=[0.1, 0.01, 0.001],
-            sampling_methods=['all-distinct', 'smallest-value', 'longest-value', 'random', 'evenly-spaced', 'first', 'biggest-value'],
+            sampling_methods=['smallest-value', 'longest-value', 'random', 'evenly-spaced', 'first', 'biggest-value'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),
             print_inds=cls._construct_from_default(args, 'print_inds', bool, False),
