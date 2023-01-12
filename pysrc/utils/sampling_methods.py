@@ -37,7 +37,9 @@ def smallest_value_sample(data: list[list[str]],
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
-    out = tmp.sort_values()
+    grouped = tmp.groupby(tmp.str.len())
+
+    out = grouped.apply(lambda x: x.sort_values(ascending=True))
     if len(out) >= num_samples:
         return out.iloc[:num_samples]
     else:
@@ -48,7 +50,9 @@ def biggest_value_sample(data: list[list[str]],
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
-    out = tmp.sort_values(ascending=False)
+    grouped = tmp.groupby(tmp.str.len())
+
+    out = grouped.apply(lambda x: x.sort_values(ascending=False))
     if len(out) >= num_samples:
         return out.iloc[:num_samples]
     else:
@@ -96,7 +100,6 @@ def evenly_spaced_sample(data: list[list[str]],
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
     space_width = math.ceil(len(tmp) / num_samples)
-    print(space_width)
     starting_index = random.randint(0, space_width)
     out_indices = [i % len(tmp) for i in range(starting_index, len(tmp), space_width)]
 
