@@ -91,16 +91,14 @@ def all_distinct_sample(data: list[list[str]],
     df = tmp.loc[tmp.astype(str).drop_duplicates().index]
     return df.iloc[:num_samples]
 
-#only method were I had to make it dependent on sample size after deduplicating
-#no idea how to keep it there because at some points it tries to sample from spaces that doesn't exist
-#doesnt't work?
+
 def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
                          num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
     space_width = math.ceil(len(tmp) / num_samples)
-    starting_index = random.randint(0, space_width)
+    starting_index = random.randint(0, space_width-1)
     out_indices = [i % len(tmp) for i in range(starting_index, len(tmp), space_width)]
 
     out = tmp.iloc[out_indices]
