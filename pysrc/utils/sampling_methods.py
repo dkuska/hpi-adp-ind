@@ -98,7 +98,7 @@ def evenly_spaced_sample(data: list[list[str]],
     space_width = math.ceil(len(tmp) / num_samples)
     print(space_width)
     starting_index = random.randint(0, space_width)
-    out_indices = [i % len(tmp) for i in range(starting_index, len(tmp) - 1, space_width)]
+    out_indices = [i % len(tmp) for i in range(starting_index, len(tmp), space_width)]
 
     out = tmp.iloc[out_indices]
     return out
