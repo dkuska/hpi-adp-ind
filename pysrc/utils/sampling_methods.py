@@ -83,14 +83,6 @@ def shortest_value_sample(data: list[list[str]],
     else:
         return df
 
-#Probably the same as first now and therefore obsolete?
-def all_distinct_sample(data: list[list[str]],
-                 num_samples: int,
-                 num_entries: int) -> pd.Series:
-    tmp = pd.Series(data)
-    df = tmp.loc[tmp.astype(str).drop_duplicates().index]
-    return df.iloc[:num_samples]
-
 
 def evenly_spaced_sample(data: list[list[str]],
                          num_samples: int,
@@ -113,6 +105,5 @@ sampling_methods_dict: dict[str,
     'evenly-spaced': evenly_spaced_sample,
     'smallest-value': smallest_value_sample,
     'biggest-value': biggest_value_sample,
-    'longest-value': longest_value_sample,
-    'all-distinct': all_distinct_sample
+    'longest-value': longest_value_sample
 }
