@@ -9,36 +9,45 @@ As an approximation we might go in 2 'steps':
 A_s [= B_s => A_s [= B => A [= B
 
 ## What we know
-
 |A|, |B| - Cardinalities of the original columns
+
 |A_s|, |B_s| - Cardinalities of our sample
 
-### Sampling Ratios
+## Sampling Ratios
 |A_s|/|A| = sr_A - Sampling Ratio of A
+
 |B_s|/|B| = sr_B - Sampling Ratio of B
 
-### Ratio of Sample Sizes
-|A|/|B| = rss
+## Ratio of Cardinality
+|A|/|B|
 
-### Ratio of Cardinality
-|A_s|/ |B_s|
+## Ratio of Sample Sizes
+|A_s|/ |B_s| = rss
 
-### Missing values
-|A_s\B_s| = mv_(A,B)
-Number of values in A, that are not in B
+## Missing values
+|A_s\B_s| = mv_(A_s, B_s)
 
-### Missing Ratio
-|A_s\B_s|\|A_s| = mr_(A,B)
-Ratio of values in A, that are not in B
+Number of values in A_s, that are not in B_s
 
-### Useless Ratio
+## Missing Ratio
+|A_s\B_s|\|A_s| = mr_(A_s, B_s)
+
+Ratio of values in A_s, that are not in B_s
+
+<!-- ## Total Missing Ratio
+|A_s\B_s|\|A| = tmr_(A_s, A, B_s)
+
+Ratio of values in A, that are not in B_s -->
+
+<!-- ### Useless Ratio
 |A_s\B_s|\|B_s| = ur_(A,B)
 Ratio of values in B, that are not in A.
 What is 'extra' in B
-i.e. they have no value for the IND A [= B
+i.e. they have no value for the IND A [= B -->
 
-### Mirrored Missing Values
-|B_s\A_s| - mv(B,A)
+## Mirrored Missing Values
+|B_s\A_s| - mv(B_s, A_s)
+
 Missing Values of the IND B [= A
 
 ## Exclusion Criteria
@@ -51,7 +60,7 @@ Missing Values of the IND B [= A
 
 ## Further Plausbilisations
 
-- If sr_B == 1 but mv = 0 => FP
+- If sr_B == 1 but mv != 0 => FP
 - If sr_B is large, but mv/mr is also large => Unlikely TP
 - If mv > |B\B_s| => FP, not enough values left in B to make IND true
 
