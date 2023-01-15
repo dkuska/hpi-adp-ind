@@ -187,9 +187,9 @@ def evaluate_ind_rankings(ranked_inds_path: str, maximum_threshold_percentage: f
             if ranked_ind.is_tp: fns += 1
             else: tns += 1
     total_number_of_inds = len(ranked_inds)
-    accuracy = round((tps + tns) / total_number_of_inds, 5)
-    precision = round(tps / (tps + fps), 5)
-    recall = round(tps / (tps + fns), 5)
+    accuracy = round((tps + tns) / total_number_of_inds, 5) if total_number_of_inds > 0 else 0.0
+    precision = round(tps / (tps + fps), 5) if tps + fps > 0 else 0.0
+    recall = round(tps / (tps + fns), 5) if tps + fns > 0 else 0.0
     print(f'For {maximum_threshold_percentage=}: {tps=}, {fps=}, {fns=}, {tns=} -> {accuracy=}, {precision=}, {recall=}')
 
 
