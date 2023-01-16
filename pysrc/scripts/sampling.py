@@ -11,12 +11,15 @@ import numpy as np
 from pathlib import Path
 
 from collections import defaultdict
+
+from pysrc.utils.is_non_zero_file import is_non_zero_file
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    MetanomeRunConfiguration, run_metanome)
 from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 from ..utils.sampling_methods import sampling_methods_dict
 from ..utils.descriptive_statistics import file_column_statistics
+
 
 
 def sample_csv(file_path: str,
@@ -35,7 +38,7 @@ def sample_csv(file_path: str,
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
     # Read input file into dataframe and cast all columns into strings
-    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str')
+    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str') if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
     
     # Cast each column into a list
     for column_index, column in enumerate(source_df.columns):
@@ -156,7 +159,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         os.path.join(source_dir, f)
         for f
         in os.listdir(source_dir)
-        if f.rsplit('.')[1] == 'csv'
+        if f.rsplit('.')[-1] == 'csv'
     ]
 
     configurations: list[MetanomeRunConfiguration] = []

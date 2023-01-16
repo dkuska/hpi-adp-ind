@@ -1,10 +1,12 @@
 import pandas as pd
+
+from pysrc.utils.is_non_zero_file import is_non_zero_file
 from ..models.column_statistics import ColumnStatistic
 from ..models.column_information import ColumnInformation
 
 def file_column_statistics(file_path: str, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
     descriptions = []
-    df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header=None)
+    df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header=None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
     
     for col_index, column in enumerate(df.columns):
         column_series = df[column].copy(deep=True)
