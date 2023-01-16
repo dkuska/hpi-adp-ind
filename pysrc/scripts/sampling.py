@@ -33,6 +33,7 @@ def sample_csv(file_path: str,
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
+    sampled_data_per_column: dict[pd.Series] = defaultdict(pd.Series)
 
     # Read input file into dataframe and cast all columns into strings
     source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str')
@@ -41,33 +42,57 @@ def sample_csv(file_path: str,
     for column_index, column in enumerate(source_df.columns):
         aggregate_data_per_column[column_index] = source_df[column].to_list()
 
-    for column in aggregate_data_per_column:
+    #move to Config
+    budgettosample = 10000
+    current_frame = 0
+    tupleperRound = 1000
+    index = 0
+
+    while(current_frame + tupleperRound <= budgettosample):
+
+        for column in aggregate_data_per_column:
+
+            if config.header:
+                file_header = aggregate_data_per_column[column][0]
+                index += 1
+
+            num_entries = len(aggregate_data_per_column[column])
+            num_samples = math.ceil(num_entries * sampling_rate)
+
+            sampling_method_function = sampling_methods_dict[sampling_method]
+            sampled_data = sampling_method_function(aggregate_data_per_column[column], current_frame, tupleperRound)
+
+            if(index == 0):
+                sampled_data_per_column[column] = sampled_data
+            else:
+                sampled_data_per_column[column] = pd.concat([sampled_data_per_column[column], sampled_data])
+
+        current_frame += tupleperRound
+        index += 1
+
+
+    for column in sampled_data_per_column:
 
         if config.header:
-            file_header = aggregate_data_per_column[column][0]
-
-        num_entries = len(aggregate_data_per_column[column])
-        num_samples = math.ceil(num_entries * sampling_rate)
+            file_header = sampled_data_per_column[column][0]
 
         # rename files column specific
         new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column + 1}.csv'
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
-        sampling_method_function = sampling_methods_dict[sampling_method]
-        sampled_data = sampling_method_function(aggregate_data_per_column[column], num_samples, num_entries)
-
-        with open(new_file_path, 'w') as file:
+        with open(new_file_path, 'a') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')
             if config.header:
                 writer.writerow([file_header])
 
             empty_str = ''
             # Changed for better readability
-            for row_index in range(0, len(sampled_data)):
-                #TODO Create Testcases to check if this always works should avoid writing empty lines into the sampled data
-                if sampled_data.iloc[row_index] == empty_str:
+            for current_row in sampled_data_per_column[column].values:
+                # TODO Create Testcases to check if this always works should avoid writing empty lines into the sampled data
+                if current_row == empty_str:
                     continue
-                writer.writerow([sampled_data.iloc[row_index]])
+                current_row_edited = current_row.replace('\;','')
+                writer.writerow([current_row])
 
         out_tuple = (new_file_path, sampling_method, sampling_rate)
         samples.append(out_tuple)
