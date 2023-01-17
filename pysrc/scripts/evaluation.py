@@ -15,7 +15,7 @@ from pysrc.utils.enhanced_json_encoder import (EnhancedJSONDecoder,
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    run_as_compared_csv_line)
-from ..utils.plots import (create_onion_plot, create_plot,
+from ..utils.plots import (create_TpFpFn_stacked_barplot_by_method, create_onion_plot, create_plot,
                            create_PrecisionRecallF1_lineplot,
                            create_TpFpFn_stacked_barplot)
 
@@ -82,25 +82,38 @@ def make_plots(output_file: str) -> list[str]:
     
     arity = 'unary' if 'unary' in output_file.rsplit(os.sep, 1)[1] else 'nary'
     
-    df = pd.read_csv(os.path.join(output_file, 'data.csv'))
+    df: pd.DataFrame = pd.read_csv(os.path.join(output_file, 'data.csv'))
        
     # Preprocessing of DataFrames, df_nary is None if arity == 'unary'
     df_original, df_nary = plotting_preprocessing_evaluation_dataframe(df, arity)
     
-    if arity == 'nary':
-        plot_fname = f'{plot_prefix}_onionPlot.jpg'
-        groupby_attributes = ['num_sampled_files']
-        onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
-        plot_paths.append(onionplot_path)
-        
-    groupby_attributes = ['sampling_method', 'budgets']
+    # if arity == 'nary':
+    #     plot_fname = f'{plot_prefix}_onionPlot.jpg'
+    #     groupby_attributes = ['num_sampled_files']
+    #     onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
+    #     plot_paths.append(onionplot_path)
+
+    sampling_methods: list[str] = []
+    for sampling_method, _ in df_original.groupby('sampling_method'):
+        sampling_methods.append(sampling_method)
+
+    # for sampling_method, _ in df_original.groupby('sampling_method'):
+    #     print(f'{sampling_method=}')
+    #     plot_fname = f'{plot_prefix}_stackedBarPlots_detailed_{sampling_method}_test.jpg'
+    #     plot_path = create_plot(df_original, [sampling_method], create_TpFpFn_stacked_barplot_by_method, plot_prefix, plot_fname)
+    #     plot_paths.append(plot_path)
     plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
+    plot_path = create_plot(df_original, sampling_methods, create_TpFpFn_stacked_barplot_by_method, plot_prefix, plot_fname)
     plot_paths.append(plot_path)
+
+    # groupby_attributes = ['sampling_method', 'sampling_rate']
+    # plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
+    # plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
+    # plot_paths.append(plot_path)
     
-    plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
-    plot_paths.append(plot_path)
+    # plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
+    # plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
+    # plot_paths.append(plot_path)
    
     # groupby_attributes = ['num_sampled_files']
     # plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'
@@ -213,9 +226,9 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     csv_path = create_evaluation_csv(experiments, output_sub_directory)
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
-    error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
-    ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
-    if interactive:
+    error_path = '' # collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
+    ranked_inds_path = '' # collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
+    if interactive and False:
         thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]
         for threshold in thresholds:
             evaluate_ind_rankings(ranked_inds_path, threshold)
