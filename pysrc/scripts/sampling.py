@@ -2,7 +2,6 @@ import argparse
 import csv
 from dataclasses import dataclass
 import itertools
-import json
 import math
 import os
 import uuid

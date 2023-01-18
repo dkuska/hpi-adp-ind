@@ -7,10 +7,10 @@ import sys
 from typing import Literal, Optional
 
 import pandas as pd
-from pysrc.models.ind import IND, RankedIND
+from ..models.ind import RankedIND
 
-from pysrc.utils.enhanced_json_encoder import (EnhancedJSONDecoder,
-                                               EnhancedJSONEncoder)
+from ..utils.enhanced_json_encoder import (EnhancedJSONDecoder,
+                                           EnhancedJSONEncoder)
 
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
