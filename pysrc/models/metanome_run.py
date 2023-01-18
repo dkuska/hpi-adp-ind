@@ -1,9 +1,9 @@
 import datetime
 import json
+from math import isnan
 import os
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
-from itertools import chain
 import statistics
 from typing import Iterator
 from pysrc.errors import tuples_to_remove
@@ -14,6 +14,7 @@ from pysrc.models.ind import IND
 from pysrc.models.column_statistics import ColumnStatistic
 
 from pysrc.utils.descriptive_statistics import file_column_statistics
+from pysrc.utils.ind_credibility import ind_credibility
 
 
 @dataclass_json
@@ -45,6 +46,11 @@ class MetanomeRunConfiguration:
                      self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
 
+    def credibility(self) -> float:
+        """Get the credibility (i.e. how trustworthy this config is) of the config."""
+        # TODO: Actually depend this on the config data
+        # return float(product([rate * 100 for rate in self.sampling_rates]))
+        return sum(self.sampling_rates) / len(self.sampling_rates)
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -152,6 +158,42 @@ class MetanomeRunBatch:
                 [error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
             results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
         return results
+
+
+    def ranked_inds(self) -> dict[IND, float]:
+        # Collect INDs
+        ind_map: dict[tuple[str, str], IND] = {}  # Map from (dependent, referenced) -> IND
+        for run in self.runs:
+            for ind in run.results.inds:
+                if (str(ind.dependents), str(ind.referenced)) not in ind_map:
+                    clean_ind = IND(dependents=ind.dependents, referenced=ind.referenced)
+                    ind_map[(str(ind.dependents), str(ind.referenced))] = clean_ind
+
+        inds: dict[IND, list[tuple[int, MetanomeRun]]] = {}
+        for run in self.runs:
+            # Skip baseline (it won't be available in production)
+            # TODO: Is this correct behavior? Not sure, but otherwise we'll get *every* TP IND as we're checking the baseline.
+            if run.configuration.is_baseline:
+                continue
+            for ind in run.results.inds:
+                clean_ind = ind_map[(str(ind.dependents), str(ind.referenced))]
+                if clean_ind not in inds: inds[clean_ind] = []
+                inds[clean_ind].append((next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error), run))
+        # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
+        baseline = self.baseline
+        inds_credibilities = {
+                ind: [
+                    ind_credibility(ind, run, missing_values, baseline)
+                    for missing_values, run
+                    in configMissingValuesPairs
+                    ]
+                for ind, configMissingValuesPairs
+                in inds.items()
+            }
+        # Rank INDs by SUM over ALL runs (with value 0.0 for runs that didn't find the IND)
+        ranked_inds = { ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0 for ind, credibilities in inds_credibilities.items() }
+        return ranked_inds
+
 
 
 def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool,
