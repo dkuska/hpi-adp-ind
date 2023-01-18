@@ -103,7 +103,7 @@ def sample_csv(source_files: list[str],
             file_prefix = source_files[file_index].rsplit('/', 1)[1].rsplit('.', 1)[0]
 
             # rename files column specific
-            new_file_name = f'{file_prefix}__{sampling_method}_{column_index + 1}.csv'
+            new_file_name = f'{file_prefix}__{str(total_budget).replace(".", "")}_{sampling_method}_{column_index + 1}.csv'
             new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
             with open(new_file_path, 'a') as file:
