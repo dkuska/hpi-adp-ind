@@ -18,10 +18,12 @@ from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 from ..utils.sampling_methods import sampling_methods_dict
 from ..utils.descriptive_statistics import file_column_statistics
 
-
-def sample_csv(file_path: str,
+from ..models.column_statistics import ColumnStatistic
+def aggregate_statistic(file_path: str) -> list[ColumnStatistic]:
+    return file_column_statistics(file_path, ';', '\\', False)
+def sample_csv(source_files: list[str],
                sampling_method: str,
-               sampling_rate: float,
+               description: list[ColumnStatistic],
                config: GlobalConfiguration) -> list[tuple[str, str, float]]:
     """Sample every single column of file separately with a certain method and rate
     and create a new tmp file for every column. Returns a list of tuples including
@@ -30,72 +32,95 @@ def sample_csv(file_path: str,
 
     samples: list[tuple[str, str, float]] = []
 
-    file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
-    aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
-    sampled_data_per_column: dict[pd.Series] = defaultdict(pd.Series)
 
-    # Read input file into dataframe and cast all columns into strings
-    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str')
-    
-    # Cast each column into a list
-    for column_index, column in enumerate(source_df.columns):
-        aggregate_data_per_column[column_index] = source_df[column].to_list()
+    sampled_data_per_column = [[] for _ in range(len(source_files))]
+
+    #get the stats from the files
+    column_count = 0
+    for ele in description:
+        column_count += len(ele)
 
     #move to Config
-    budgettosample = 10000
+    #TODO isn't a hard cut so far need to see if theres a way to calculate how much i can add per column
+    total_budget = 10000
+    #TODO find a way to realize that the capacity is reached if every column is increased???
+    budget_per_sample = math.floor(total_budget / column_count)
     current_frame = 0
-    tupleperRound = 1000
-    index = 0
+    tupleperRound = 100
+    first_sample = True
+    budget_left = True
 
-    while(current_frame + tupleperRound <= budgettosample):
+    while budget_left:
+        current_file_index = 0
+        for file_path in source_files:
+            #NOTE to imporve Performance do that once out of this loop AND do it directly per File and Colum?
+            aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
+            # Read input file into dataframe and cast all columns into strings
+            source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str')
+            # Cast each column into a list
+            for column_index, column in enumerate(source_df.columns):
+                aggregate_data_per_column[column_index] = source_df[column].to_list()
 
-        for column in aggregate_data_per_column:
+            for column_index in aggregate_data_per_column:
 
-            if config.header:
-                file_header = aggregate_data_per_column[column][0]
-                index += 1
+                if config.header and first_sample:
+                    file_header = aggregate_data_per_column[column_index][0]
 
-            num_entries = len(aggregate_data_per_column[column])
-            num_samples = math.ceil(num_entries * sampling_rate)
+                if description[current_file_index][column_index].count <= current_frame + tupleperRound:
+                    #TODO Find a way to return that budget back to the columns who contain more values
+                    # --> Adapt the current frame for that might work
+                    #Alternative create a list of sample_per_column with the max samples it can take
+                    #but I think it is done implicit because all other grow proportional till budget is empty
+                    continue
 
-            sampling_method_function = sampling_methods_dict[sampling_method]
-            sampled_data = sampling_method_function(aggregate_data_per_column[column], current_frame, tupleperRound)
+                sampling_method_function = sampling_methods_dict[sampling_method]
+                sampled_data = sampling_method_function(aggregate_data_per_column[column_index], current_frame, tupleperRound)
 
-            if(index == 0):
-                sampled_data_per_column[column] = sampled_data
-            else:
-                sampled_data_per_column[column] = pd.concat([sampled_data_per_column[column], sampled_data])
+                if first_sample:
+                    sampled_data_per_column[current_file_index].insert(column_index, sampled_data)
+                else:
+                    sampled_data_per_column[current_file_index][column_index] = pd.concat([sampled_data_per_column[current_file_index][column_index], sampled_data])
+
+            current_file_index += 1
 
         current_frame += tupleperRound
-        index += 1
+        first_sample = False
 
+        sampled_tuples = 0
+        for sam_file in range(len(sampled_data_per_column)):
+            for sam_column in sampled_data_per_column[sam_file]:
+                sampled_tuples += len(sam_column)
 
-    for column in sampled_data_per_column:
+        if sampled_tuples >= total_budget:
+            budget_left = False
 
-        if config.header:
-            file_header = sampled_data_per_column[column][0]
-
-        # rename files column specific
-        new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column + 1}.csv'
-        new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
-
-        with open(new_file_path, 'a') as file:
-            writer = csv.writer(file, delimiter=';', escapechar='\\')
+    for file_index in range(len(source_files)):
+        for column_index in range(len(sampled_data_per_column[file_index])):
             if config.header:
-                writer.writerow([file_header])
+                file_header = sampled_data_per_column[file_index][column_index][0]
 
-            empty_str = ''
-            # Changed for better readability
-            for current_row in sampled_data_per_column[column].values:
-                # TODO Create Testcases to check if this always works should avoid writing empty lines into the sampled data
-                if current_row == empty_str:
-                    continue
-                current_row_edited = current_row.replace('\;','')
-                writer.writerow([current_row])
+            file_prefix = source_files[file_index].rsplit('/', 1)[1].rsplit('.', 1)[0]
 
-        out_tuple = (new_file_path, sampling_method, sampling_rate)
-        samples.append(out_tuple)
+            # rename files column specific
+            new_file_name = f'{file_prefix}__{sampling_method}_{column_index + 1}.csv'
+            new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
+
+            with open(new_file_path, 'a') as file:
+                writer = csv.writer(file, delimiter=';', escapechar='\\')
+                if config.header:
+                    writer.writerow([file_header])
+
+                empty_str = ''
+                # Changed for better readability
+                for current_row in sampled_data_per_column[file_index][column_index].values:
+                    # TODO Create Testcases to check if this always works should avoid writing empty lines into the sampled data
+                    if current_row == empty_str:
+                        continue
+                    writer.writerow([current_row])
+
+            out_tuple = (new_file_path, sampling_method, total_budget)
+            samples.append(out_tuple)
 
     return samples
 
@@ -217,17 +242,18 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             create_plots=config.create_plots,
             is_baseline=True,
         ))
-
+    description = []
+    for i, file_path in enumerate(source_files):
+        description.append(aggregate_statistic(file_path))
     # Sampled runs
     # Sample each source file
     # Note: New approach: Group by sampling approach and rate already during sample creation
     # This replaces the need for get_file_combinations later on
+    #TODO move this into the sample_csv Function
     samples = []
     for sampling_method in config.sampling_methods:
-        for sampling_rate in config.sampling_rates:
             new_file_list = []
-            for i, file_path in enumerate(source_files):
-                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, config))
+            new_file_list.extend(sample_csv(source_files, sampling_method, description, config))
             samples.append(new_file_list)
     # Note: Old approach
     # for i, file_path in enumerate(source_files):
