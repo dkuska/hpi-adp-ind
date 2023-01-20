@@ -309,7 +309,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-        missing_values = 1000 # TODO: Make this configurable and dependent on the sample size
+        missing_values = 10000 # TODO: Make this configurable and dependent on the sample size
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
