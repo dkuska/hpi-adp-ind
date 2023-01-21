@@ -160,7 +160,7 @@ class MetanomeRunBatch:
         return results
 
 
-    def ranked_inds(self) -> dict[IND, float]:
+    def ranked_inds(self, model) -> dict[IND, float]:
         # Collect INDs
         ind_map: dict[tuple[str, str], IND] = {}  # Map from (dependent, referenced) -> IND
         for run in self.runs:
@@ -183,7 +183,7 @@ class MetanomeRunBatch:
         baseline = self.baseline
         inds_credibilities = {
                 ind: [
-                    ind_credibility(ind, run, missing_values, baseline)
+                    ind_credibility(ind, run, missing_values, baseline, model)
                     for missing_values, run
                     in configMissingValuesPairs
                     ]

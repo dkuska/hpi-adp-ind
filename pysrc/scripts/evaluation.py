@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from typing import Literal, Optional
+import pickle
 
 import pandas as pd
 from pysrc.models.ind import IND, RankedIND
@@ -143,8 +144,11 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
     return output_json
 
 
-def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str, top_inds: int) -> str:
-    ranked_inds = experiments.ranked_inds()
+def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], model_path: str, output_folder: str, top_inds: int) -> str:
+    with open(model_path, 'rb') as model_file:
+        model = pickle.load(model_file)
+    
+    ranked_inds = experiments.ranked_inds(model)
     baseline = experiments.baseline
     ranked_inds_object = [RankedIND(ind, credibility, baseline.results.has_ind(ind)) for ind, credibility in ranked_inds.items()]
     if mode == 'interactive':
@@ -196,17 +200,19 @@ def evaluate_ind_rankings(ranked_inds_path: str, maximum_threshold_percentage: f
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False, default=None, help='The JSON file containing the experiment information to be evaluated')
+    parser.add_argument('--model-path', type=str, default=None, help='Path to the ML-model used to score the INDs')
     parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), of the error metrics (`error`), or of the ranked inds (`ranked`)')
     parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
     parser.add_argument('--top-inds', type=int, default=-1, help='The number of INDs (from the top ranking) that should be shown. A negative number shows all.')
+
     GlobalConfiguration.argparse_arguments(parser)
     args = parser.parse_args()
     return args
 
 
-def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, return_path: str, top_inds: int) -> Optional[str]:
+def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, model_path: str, return_path: str, top_inds: int) -> Optional[str]:
     experiments: MetanomeRunBatch = load_experiment_information(json_file=file)
-    
+
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
     output_sub_directory = file.rsplit(os.sep, 1)[0]  # .rsplit('.', 1)[0]
     
@@ -214,7 +220,7 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
     error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
-    ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
+    ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', model_path, output_sub_directory, top_inds)
     if interactive:
         thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]
         for threshold in thresholds:
@@ -234,8 +240,8 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
 
 def run_evaluations(config: GlobalConfiguration, args: argparse.Namespace) -> list[Optional[str]]:
     if not config.pipe:
-        return [run_evaluation(config, args.file, args.interactive, args.return_path, args.top_inds)]
-    return [run_evaluation(config, file.rstrip(), args.interactive, args.return_path, args.top_inds) for file in sys.stdin.read().split('\0')]
+        return [run_evaluation(config, args.file, args.interactive, args.model_path, args.return_path, args.top_inds)]
+    return [run_evaluation(config, file.rstrip(), args.interactive, args.model_path, args.return_path, args.top_inds) for file in sys.stdin.read().split('\0')]
 
 
 def main():

@@ -1,8 +1,8 @@
 from pysrc.models.ind import IND
 from ..models import metanome_run
+import numpy as np
 
-
-def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun') -> float:
+def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun', model: RandomForestClassifier) -> float:
     dependents_stats = [next(stat for stat in run.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
     referenced_stats = [next(stat for stat in run.column_statistics if stat.column_information == referenced) for referenced in ind.referenced]
     baseline_dependents_stats = [next(stat for stat in baseline.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
@@ -30,4 +30,23 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     if missing_values > baseline_referenced_stat.unique_count - referenced_stat.unique_count:
         # There are more missing values than there are values that are not in the sample of the right hand side
         return nan
-    return (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
+    
+    
+    #     ['missing_values', 'left_baseline_count', 'left_baseline_unique_ratio',
+    #    'right_baseline_count', 'right_baseline_unique_ratio', 'left_count',
+    #    'left_sampling_rate', 'right_count', 'right_sampling_rate',
+    #    'cardinality_ratio', 'sample_size_ratio', 'x0_biggest-value',
+    #    'x0_evenly-spaced', 'x0_first', 'x0_longest-value', 'x0_random',
+    #    'x0_smallest-value']
+    
+    # TODO: Add sampling ratio to dependent stats
+    stats = np.array([missing_values, baseline_dependents_stat.count, baseline_dependents_stat.unique_ratio, 
+             baseline_referenced_stat.count, baseline_dependents_stat.unique_ratio,
+             dependents_stat.count, 
+             referenced_stat.count,
+             ratio_of_cardinality, ratio_of_sample_sizes
+             ]).reshape(1, -1)
+    score = model.predict_proba(stats)
+    return score[-1] # We are only interested in the probability that the IND is a TP
+    
+    # return (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
