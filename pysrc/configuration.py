@@ -10,7 +10,7 @@ from dateutil import parser as datetime_parser
 class GlobalConfiguration:
     algorithm: str
     arity: str
-    sampling_rates: list[float]
+    total_budget: list[int]
     sampling_methods: list[str]
 
     header: bool

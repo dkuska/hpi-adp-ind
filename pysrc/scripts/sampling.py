@@ -239,7 +239,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             new_file_list = []
             budget_to_share = 0
             size_per_column = [[] for _ in range(len(source_files))]
-            basic_size = math.floor(sampling_rate/len(description))
+            basic_size = math.floor(budget/len(description))
             for file_index in range(len(description)):
                 for column_index in range(len(description[file_index])):
                     if description[file_index][column_index].unique_count > basic_size:
