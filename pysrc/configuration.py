@@ -47,7 +47,7 @@ class GlobalConfiguration:
         return cls(
             algorithm=algorithm,
             arity=arity,
-            sampling_rates=[10000, 100000],
+            total_budget=[10000, 100000],
             sampling_methods=['smallest-value', 'longest-value', 'random', 'evenly-spaced', 'first', 'biggest-value'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),

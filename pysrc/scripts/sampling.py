@@ -207,7 +207,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
             arity=config.arity,
-            sampling_rates=used_sampling_rates,
+            total_budget=used_sampling_rates,
             sampling_methods=used_sampling_methods,
             time=config.now,
             source_dir=config.source_dir,
@@ -235,7 +235,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     # This replaces the need for get_file_combinations later on
     samples = []
     for sampling_method in config.sampling_methods:
-        for sampling_rate in config.sampling_rates:
+        for budget in config.total_budget:
             new_file_list = []
             budget_to_share = 0
             size_per_column = [[] for _ in range(len(source_files))]
@@ -252,7 +252,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             size_per_column = assign_budget(size_per_column, budget_to_share)
 
             for i, file_path in enumerate(source_files):
-                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, size_per_column[i], config))
+                new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
             samples.append(new_file_list)
 
     # Note: Old approach
@@ -272,7 +272,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
             arity=config.arity,
-            sampling_rates=used_sampling_rates,
+            total_budget=used_sampling_rates,
             sampling_methods=used_sampling_methods,
             time=config.now,
             source_dir=config.source_dir,
