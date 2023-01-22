@@ -22,7 +22,7 @@ from ..utils.descriptive_statistics import file_column_statistics
 from ..models.column_statistics import ColumnStatistic
 
 def aggregate_statistic(file_path: str) -> list[ColumnStatistic]:
-    return file_column_statistics(file_path, ';', '\\', False)
+    return file_column_statistics(file_path, False)
 
 def assign_budget(size_per_column: list[[tuple[int, bool]]], budget_to_share: int):
 
