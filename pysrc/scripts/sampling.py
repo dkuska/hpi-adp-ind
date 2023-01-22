@@ -12,17 +12,43 @@ from pathlib import Path
 
 from collections import defaultdict
 
-from pysrc.utils.is_non_zero_file import is_non_zero_file
+from ..utils.is_non_zero_file import is_non_zero_file
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    MetanomeRunConfiguration, run_metanome)
 from ..utils.sampling_methods import sampling_methods_dict
 
+from ..utils.descriptive_statistics import file_column_statistics
+from ..models.column_statistics import ColumnStatistic
 
+def aggregate_statistic(file_path: str) -> list[ColumnStatistic]:
+    return file_column_statistics(file_path, False)
+
+def assign_budget(size_per_column: list[[tuple[int, bool]]], budget_to_share: int):
+
+    count_columns_not_full = 0
+
+    for file_index in range(len(size_per_column)):
+        for column_index in range(len(size_per_column[file_index])):
+            if not size_per_column[file_index][column_index][1]:
+                count_columns_not_full += 1
+
+    if count_columns_not_full == 0:
+        return size_per_column
+
+    budget_per_column = math.floor(budget_to_share / count_columns_not_full)
+
+    for file_index in range(len(size_per_column)):
+        for column_index in range(len(size_per_column[file_index])):
+            if not size_per_column[file_index][column_index][1]:
+                size_per_column[file_index][column_index][0] += budget_per_column
+
+    return size_per_column
 
 def sample_csv(file_path: str,
                sampling_method: str,
                sampling_rate: float,
+               size_per_column: list[tuple[int, bool]],
                config: GlobalConfiguration) -> list[tuple[str, str, float]]:
     """Sample every single column of file separately with a certain method and rate
     and create a new tmp file for every column. Returns a list of tuples including
@@ -36,8 +62,9 @@ def sample_csv(file_path: str,
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
     # Read input file into dataframe and cast all columns into strings
+
     source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str', header=None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
-    
+
     # Cast each column into a list
     for column_index, column in enumerate(source_df.columns):
         aggregate_data_per_column[column_index] = source_df[column].to_list()
@@ -49,8 +76,9 @@ def sample_csv(file_path: str,
             file_header = column_data[0]
             column_data = column_data[1:]
 
-        num_entries = len(column_data)
-        num_samples = math.ceil(num_entries * sampling_rate)
+        #Can be removed or doesn't needed fpr sampling anymore
+        num_entries = len(aggregate_data_per_column[column])
+        num_samples = size_per_column[column][0]
 
         # rename files column specific
         new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column + 1}.csv'
@@ -181,7 +209,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
             arity=config.arity,
-            sampling_rates=used_sampling_rates,
+            total_budget=used_sampling_rates,
             sampling_methods=used_sampling_methods,
             time=config.now,
             source_dir=config.source_dir,
@@ -197,17 +225,38 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             is_baseline=True,
         ))
 
+    description = []
+    for i, file_path in enumerate(source_files):
+        description.append(aggregate_statistic(file_path))
+    #TODO calculate the size of the samples
+
+
     # Sampled runs
     # Sample each source file
     # Note: New approach: Group by sampling approach and rate already during sample creation
     # This replaces the need for get_file_combinations later on
     samples = []
     for sampling_method in config.sampling_methods:
-        for sampling_rate in config.sampling_rates:
+        for budget in config.total_budget:
             new_file_list = []
+            budget_to_share = 0
+            size_per_column = [[] for _ in range(len(source_files))]
+            basic_size = math.floor(budget/len(description))
+            for file_index in range(len(description)):
+                for column_index in range(len(description[file_index])):
+                    if description[file_index][column_index].unique_count > basic_size:
+                        size_per_column[file_index].insert(column_index, [basic_size, False])
+
+                    else:
+                        size_per_column[file_index].insert(column_index, [description[file_index][column_index].unique_count, True])
+                        budget_to_share += basic_size - description[file_index][column_index].unique_count
+
+            size_per_column = assign_budget(size_per_column, budget_to_share)
+
             for i, file_path in enumerate(source_files):
-                new_file_list.extend(sample_csv(file_path, sampling_method, sampling_rate, config))
+                new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
             samples.append(new_file_list)
+
     # Note: Old approach
     # for i, file_path in enumerate(source_files):
     #     for sampling_method in config.sampling_methods:
@@ -225,7 +274,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
             arity=config.arity,
-            sampling_rates=used_sampling_rates,
+            total_budget=used_sampling_rates,
             sampling_methods=used_sampling_methods,
             time=config.now,
             source_dir=config.source_dir,

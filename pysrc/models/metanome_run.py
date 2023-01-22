@@ -23,7 +23,7 @@ class MetanomeRunConfiguration:
     """Contains configuration information about a Metanome run"""
     algorithm: str
     arity: str
-    sampling_rates: list[float]
+    total_budget: list[int]
     sampling_methods: list[str]
     time: datetime.datetime
 
@@ -41,7 +41,7 @@ class MetanomeRunConfiguration:
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.algorithm, self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
+        return hash((self.algorithm, self.arity, tuple(self.total_budget), tuple(self.sampling_methods), self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
                      self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
@@ -50,7 +50,7 @@ class MetanomeRunConfiguration:
         """Get the credibility (i.e. how trustworthy this config is) of the config."""
         # TODO: Actually depend this on the config data
         # return float(product([rate * 100 for rate in self.sampling_rates]))
-        return sum(self.sampling_rates) / len(self.sampling_rates)
+        return sum(self.total_budget) / len(self.total_budget)
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -301,7 +301,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-        missing_values = 1000 # TODO: Make this configurable and dependent on the sample size
+        missing_values = 10000 # TODO: Make this configurable and dependent on the sample size
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
