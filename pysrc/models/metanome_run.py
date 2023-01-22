@@ -226,17 +226,16 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 errors.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced], errors=errors)
-            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            dependant_column = dependant_raw['columnIdentifier']
             dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
 
             referenced_raw = line_json['referenced']['columnIdentifiers'][0]
             referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced_column = referenced_raw['columnIdentifier']
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
             if algorithm == 'PartialSPIDER':
@@ -252,7 +251,6 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
                 dependant_column = dependant_entry['columnIdentifier']
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
                 dependant_list.append(dependant)
 
             referenced_list: list[ColumnInformation] = []
@@ -261,10 +259,8 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
                 referenced_column = referenced_entry['columnIdentifier']
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
             ind = IND(dependents=dependant_list, referenced=referenced_list)
 
         elif arity == 'nary' and is_baseline == False:
@@ -272,23 +268,19 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                dependant_column = dependant_entry['columnIdentifier']
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
                 dependant_list.append(dependant)
 
             referenced_list = []
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = 'column' + str(
-                    referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                referenced_column = referenced_entry['columnIdentifier']
 
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
             ind = IND(dependents=dependant_list, referenced=referenced_list)
         else:
             continue
@@ -318,7 +310,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb: int = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, is_baseline=configuration.is_baseline)]
+    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, configuration.header, is_baseline=configuration.is_baseline)]
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -331,6 +323,9 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                     --skip-differing-lines \
                     -o {output_rule} \
                     --escape {escape} '
+
+    if configuration.header:
+        execute_str += '--header '
 
     if configuration.algorithm == 'BINDER':
         execute_str += f'--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'

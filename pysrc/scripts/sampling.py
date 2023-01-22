@@ -16,8 +16,8 @@ from ..utils.is_non_zero_file import is_non_zero_file
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    MetanomeRunConfiguration, run_metanome)
-from ..utils.enhanced_json_encoder import EnhancedJSONEncoder
 from ..utils.sampling_methods import sampling_methods_dict
+
 from ..utils.descriptive_statistics import file_column_statistics
 from ..models.column_statistics import ColumnStatistic
 
@@ -62,17 +62,19 @@ def sample_csv(file_path: str,
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
     # Read input file into dataframe and cast all columns into strings
-    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str') if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
 
+    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str', header=None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
 
     # Cast each column into a list
     for column_index, column in enumerate(source_df.columns):
         aggregate_data_per_column[column_index] = source_df[column].to_list()
 
     for column in aggregate_data_per_column:
+        column_data = aggregate_data_per_column[column]
 
         if config.header:
-            file_header = aggregate_data_per_column[column][0]
+            file_header = column_data[0]
+            column_data = column_data[1:]
 
         #Can be removed or doesn't needed fpr sampling anymore
         num_entries = len(aggregate_data_per_column[column])
@@ -83,7 +85,7 @@ def sample_csv(file_path: str,
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
-        sampled_data = sampling_method_function(aggregate_data_per_column[column], num_samples, num_entries)
+        sampled_data = sampling_method_function(column_data, num_samples, num_entries)
 
         with open(new_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')
@@ -147,7 +149,7 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
             current_tuple = samples[num_files_index][sample_file_index]
             path_to_data = current_tuple[0]
             # TODO add handling of headers in files
-            df = pd.read_csv(path_to_data, sep=';', header=None, on_bad_lines='skip')
+            df = pd.read_csv(path_to_data, sep=';', header=None if config.header else 'infer', on_bad_lines='skip')
             numeric_columns = df.select_dtypes(include=np.number).columns.tolist()
             categorical_columns = df.select_dtypes(include='object').columns.tolist()
 
