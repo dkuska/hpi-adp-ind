@@ -71,9 +71,9 @@ def create_TpFpFn_stacked_barplot(axes: matplotlib.axes.Axes, dataframe: pd.Data
 
     df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'type', 'count'])
 
-    # If the identifiers are floats (aka groupby_attr == 'sampling_rate') we want log_scale enabled
+    # If the identifiers are ints (aka groupby_attr == 'budgets') we want log_scale enabled
     # Otherwise the histogram bars are squished together for small values
-    if isinstance(identifiers[0], float):
+    if isinstance(identifiers[0], int):
         sns.histplot(
             df_grouped,
             x=groupby_attr,

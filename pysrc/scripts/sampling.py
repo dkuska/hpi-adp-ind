@@ -55,15 +55,15 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
 
 def sample_csv(file_path: str,
                sampling_method: str,
-               sampling_rate: float,
+               budget: int,
                size_per_column: list[ColumnBudgetInfo],
-               config: GlobalConfiguration) -> list[tuple[str, str, float]]:
-    """Sample every single column of file separately with a certain method and rate
+               config: GlobalConfiguration) -> list[tuple[str, str, int]]:
+    """Sample every single column of file separately with a certain method and budget
     and create a new tmp file for every column. Returns a list of tuples including
-    the path, method, rate of the  column of the sampled file.
+    the path, method, budget of the column of the sampled file.
     """
 
-    samples: list[tuple[str, str, float]] = []
+    samples: list[tuple[str, str, int]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
@@ -87,7 +87,7 @@ def sample_csv(file_path: str,
         num_samples = size_per_column[column].allowed_budget
 
         # rename files column specific
-        new_file_name = f'{file_prefix}__{str(sampling_rate).replace(".", "")}_{sampling_method}_{column + 1}.csv'
+        new_file_name = f'{file_prefix}__{str(budget)}_{sampling_method}_{column + 1}.csv'
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
@@ -106,7 +106,7 @@ def sample_csv(file_path: str,
                     continue
                 writer.writerow([sampled_data.iloc[row_index]])
 
-        out_tuple = (new_file_path, sampling_method, sampling_rate)
+        out_tuple = (new_file_path, sampling_method, budget)
         samples.append(out_tuple)
 
     return samples
@@ -237,12 +237,12 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
 
     # Sampled runs
     # Sample each source file
-    # Note: New approach: Group by sampling approach and rate already during sample creation
+    # Note: New approach: Group by sampling approach and budget already during sample creation
     # This replaces the need for get_file_combinations later on
-    samples: list[list[tuple[str, str, float]]] = []
+    samples: list[list[tuple[str, str, int]]] = []
     for sampling_method in config.sampling_methods:
         for budget in config.total_budget:
-            new_file_list: list[tuple[str, str, float]] = []
+            new_file_list: list[tuple[str, str, int]] = []
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
             basic_size = math.floor(budget/len(description))
@@ -264,9 +264,9 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     # Note: Old approach
     # for i, file_path in enumerate(source_files):
     #     for sampling_method in config.sampling_methods:
-    #         for sampling_rate in config.sampling_rates:
+    #         for budget in config.total_budget:
     #             # Sample
-    #             new_file_list = sample_csv(file_path, sampling_method, sampling_rate, config)
+    #             new_file_list = sample_csv(file_path, sampling_method, budget, config)
     #             samples.append(new_file_list)
 
     # TODO change to clever sampling schema
