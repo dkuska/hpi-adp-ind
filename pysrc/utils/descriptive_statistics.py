@@ -4,7 +4,7 @@ from pysrc.utils.is_non_zero_file import is_non_zero_file
 from ..models.column_statistics import ColumnStatistic
 from ..models.column_information import ColumnInformation
 
-def file_column_statistics(file_path: str, header: bool, *, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
+def file_column_statistics(file_path: str, *, header: bool, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
     descriptions = []
     df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header='infer' if header else None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
     
@@ -17,6 +17,10 @@ def file_column_statistics(file_path: str, header: bool, *, delimiter: str =';',
         column_series.sort_values(inplace=True, ascending=True)
         count = column_series.count()
         unique_count = column_series.nunique()
+        # if file_path == '/home/clemens/Dokumente/HPI/WiSe_2022-2023/Approximate_Data_Profiling/GitHub/dkuska/hpi-adp-ind/tmp/COMMENTS__10000_smallest-value_1.csv':
+        #     print(f'{df=}')
+        #     print(f'{unique_count=}, {header=}')
+        #     exit(2)
         min = column_series.iloc[0]
         max = column_series.iloc[count-1]
         

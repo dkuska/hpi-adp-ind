@@ -1,5 +1,5 @@
 import os
-from typing import Callable, Optional
+from typing import Optional, Protocol
 
 import numpy as np
 from matplotlib import axes
@@ -7,14 +7,13 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from typing import Any, Protocol
 
 
-class PlotMethod(Protocol):
-    def __call__(self, axes: axes.Axes, dataframe: pd.DataFrame, method: str) -> axes.Axes: ...
+class SamplingMethodPlotMethod(Protocol):
+    def __call__(self, *, axes: axes.Axes, dataframe: pd.DataFrame, method: str) -> axes.Axes: ...
 
 
-def create_plot(dataframe: pd.DataFrame, methods: list[str], plot_method: PlotMethod, plot_folder: str,
+def create_plot(dataframe: pd.DataFrame, methods: list[str], plot_method: SamplingMethodPlotMethod, plot_folder: str,
                 plot_fname: str, figsize=(15, 10)) -> str:
     f: Figure
     axiis: axes.Axes
@@ -27,6 +26,38 @@ def create_plot(dataframe: pd.DataFrame, methods: list[str], plot_method: PlotMe
             ax = plot_method(axes=ax, dataframe=dataframe, method=method)
     else:
         axiis = plot_method(axes=axiis, dataframe=dataframe, method=methods[0])
+
+    plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
+    f.savefig(plot_path)
+    return plot_path
+
+
+def plot_missing_values(dataframe: pd.DataFrame, *, plot_folder: str, plot_fname: str, figsize=(15, 10)) -> str:
+    f: Figure
+    axiis: axes.Axes
+    f, axiis = plt.subplots(1, 1, figsize=figsize)
+    sns.despine(f)
+
+    data_dict: dict[str, list] = {
+        'Config': [],
+        'Value': [],
+        'Kind': [],
+    }
+    for _, row in dataframe.iterrows():
+        # Don't plot baseline
+        if row['sampling_method'] == 'None':
+            continue
+        data_dict['Config'].append(f'{row["sampling_method"]}, {row["sampling_rate"]}')
+        data_dict['Value'].append(row['mean_tp_missing_values'])
+        data_dict['Kind'].append('Mean TP Missing Values')
+        data_dict['Config'].append(f'{row["sampling_method"]}, {row["sampling_rate"]}')
+        data_dict['Value'].append(row['mean_fp_missing_values'])
+        data_dict['Kind'].append('Mean FP Missing Values')
+        
+    df_missing_values = pd.DataFrame(data=data_dict)
+
+    sns.barplot(df_missing_values, y='Config', x='Value', hue='Kind', ax=axiis, orient='h')
+        
 
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
