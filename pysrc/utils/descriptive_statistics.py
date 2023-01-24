@@ -6,7 +6,7 @@ from ..models.column_information import ColumnInformation
 
 def file_column_statistics(file_path: str, header: bool, *, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
     descriptions = []
-    df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header=None if header else 'infer') if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
+    df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header='infer' if header else None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
     
     for col_index, column in enumerate(df.columns):
         column_series = df[column].copy(deep=True)

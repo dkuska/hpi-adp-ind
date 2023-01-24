@@ -157,7 +157,7 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
             current_tuple = samples[num_files_index][sample_file_index]
             path_to_data = current_tuple[0]
             # TODO add handling of headers in files
-            df = pd.read_csv(path_to_data, sep=';', header=None if config.header else 'infer', on_bad_lines='skip')
+            df = pd.read_csv(path_to_data, sep=';', header='infer' if config.header else None, on_bad_lines='skip')
             numeric_columns = df.select_dtypes(include=np.number).columns.tolist()
             categorical_columns = df.select_dtypes(include='object').columns.tolist()
 
