@@ -47,10 +47,10 @@ def plot_missing_values(dataframe: pd.DataFrame, *, plot_folder: str, plot_fname
         # Don't plot baseline
         if row['sampling_method'] == 'None':
             continue
-        data_dict['Config'].append(f'{row["sampling_method"]}, {row["sampling_rate"]}')
+        data_dict['Config'].append(f'{row["sampling_method"]}, {row["budgets"]}')
         data_dict['Value'].append(row['mean_tp_missing_values'])
         data_dict['Kind'].append('Mean TP Missing Values')
-        data_dict['Config'].append(f'{row["sampling_method"]}, {row["sampling_rate"]}')
+        data_dict['Config'].append(f'{row["sampling_method"]}, {row["budgets"]}')
         data_dict['Value'].append(row['mean_fp_missing_values'])
         data_dict['Kind'].append('Mean FP Missing Values')
         
@@ -99,7 +99,7 @@ def create_TpFpFn_stacked_barplot_by_method(axes: axes.Axes, dataframe: pd.DataF
             continue
         df_matching = frame
         break
-    return create_TpFpFn_stacked_barplot(axes, df_matching, 'sampling_rate', method)
+    return create_TpFpFn_stacked_barplot(axes, df_matching, 'budgets', method)
 
 
 def create_TpFpFn_stacked_barplot(axiis: axes.Axes, dataframe: pd.DataFrame,

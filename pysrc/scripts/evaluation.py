@@ -110,7 +110,7 @@ def make_plots(output_file: str) -> list[str]:
     plot_path = plot_missing_values(df_original, plot_folder=plot_prefix, plot_fname=plot_fname)
     plot_paths.append(plot_path)
 
-    # groupby_attributes = ['sampling_method', 'sampling_rate']
+    # groupby_attributes = ['sampling_method', 'budgets']
     # plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
     # plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
     # plot_paths.append(plot_path)
