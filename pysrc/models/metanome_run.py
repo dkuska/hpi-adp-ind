@@ -49,7 +49,7 @@ class MetanomeRunConfiguration:
     def credibility(self) -> float:
         """Get the credibility (i.e. how trustworthy this config is) of the config."""
         # TODO: Actually depend this on the config data
-        # return float(product([rate * 100 for rate in self.sampling_rates]))
+        # return float(product([budget for budget in self.total_budget]))
         return sum(self.total_budget) / len(self.total_budget)
 
 @dataclass_json
@@ -423,7 +423,7 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     sampled_file_paths = run.configuration.source_files
     sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
 
-    file_names, methods, rates = [], [], []
+    file_names, methods, budgets = [], [], []
     for sampled_file in sampled_file_names:
         split_filename = sampled_file.split(
             '__')  # Detect Column Sampling, as this is evident from the '__' in the file
@@ -436,26 +436,25 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
             split_filename.append(split_metadata[0])
             split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
-            fname, sampling_rate, sampling_method = split_filename
+            fname, budget, sampling_method = split_filename
             fname = fname + '_' + split_metadata[2]
-            sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
-            fname, sampling_rate, sampling_method = sampled_file, '1.0', 'None'
+            fname, budget, sampling_method = sampled_file, str(float('inf')), 'None'
 
         file_names.append(fname)
         methods.append(sampling_method)
-        rates.append(sampling_rate)
+        budgets.append(budget)
 
     if run.configuration.arity == 'unary':
         tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
-        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
 
         return ['; '.join(file_names),
                 '; '.join(methods),\
-                '; '.join(rates), \
+                '; '.join(budgets), \
                 '; '.join([str(tp_i) for tp_i in tp]), \
                 '; '.join([str(fp_i) for fp_i in fp]), \
                 '; '.join([str(fn_i) for fn_i in fn]), \
