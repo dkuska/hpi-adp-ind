@@ -147,8 +147,10 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
 def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], model_path: str, output_folder: str, top_inds: int) -> str:
     with open(model_path, 'rb') as model_file:
         model = pickle.load(model_file)
+    with open('pysrc/utils/maxabsscaler.pkl', 'rb') as scaler_file:
+        scaler = pickle.load(scaler_file)
     
-    ranked_inds = experiments.ranked_inds(model)
+    ranked_inds = experiments.ranked_inds(model, scaler)
     baseline = experiments.baseline
     ranked_inds_object = [RankedIND(ind, credibility, baseline.results.has_ind(ind)) for ind, credibility in ranked_inds.items()]
     if mode == 'interactive':

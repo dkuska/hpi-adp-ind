@@ -1,9 +1,8 @@
 from pysrc.models.ind import IND
 from ..models import metanome_run
-import pickle
 import pandas as pd
 
-def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun', model) -> float:
+def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun', model, scaler) -> float:
     dependents_stats = [next(stat for stat in run.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
     referenced_stats = [next(stat for stat in run.column_statistics if stat.column_information == referenced) for referenced in ind.referenced]
     baseline_dependents_stats = [next(stat for stat in baseline.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
@@ -32,14 +31,6 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
         # There are more missing values than there are values that are not in the sample of the right hand side
         return nan
     
-    
-    #     ['missing_values', 'left_baseline_count', 'left_baseline_unique_ratio',
-    #    'right_baseline_count', 'right_baseline_unique_ratio', 'left_count',
-    #    'left_sampling_rate', 'right_count', 'right_sampling_rate',
-    #    'cardinality_ratio', 'sample_size_ratio', 'missing_ratio',
-    #    'useless_ratio']
-    with open('maxabsscaler.pkl', 'rb') as file:
-        scaler = pickle.load(file)
     # TODO: Add sampling ratio to dependent stats
     stats = pd.DataFrame([[missing_values, 
                             baseline_dependents_stat.count, baseline_dependents_stat.unique_ratio, 
