@@ -38,7 +38,7 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     #    'left_sampling_rate', 'right_count', 'right_sampling_rate',
     #    'cardinality_ratio', 'sample_size_ratio', 'missing_ratio',
     #    'useless_ratio']
-    with open('/home/nano/projects/hpi-adp-ind/pysrc/utils/ml/maxabsscaler.pkl', 'rb') as file:
+    with open('maxabsscaler.pkl', 'rb') as file:
         scaler = pickle.load(file)
     # TODO: Add sampling ratio to dependent stats
     stats = pd.DataFrame([[missing_values, 
