@@ -37,7 +37,7 @@ def smallest_value_sample(data: list[list[str]],
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
-    grouped = tmp.groupby(tmp.str.len())
+    grouped = tmp.groupby(tmp.str.len(), group_keys=False)
 
     out = grouped.apply(lambda x: x.sort_values(ascending=True))
     if len(out) >= num_samples:
@@ -50,7 +50,7 @@ def biggest_value_sample(data: list[list[str]],
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
-    grouped = tmp.groupby(tmp.str.len())
+    grouped = tmp.groupby(tmp.str.len(), group_keys=False)
 
     out = grouped.apply(lambda x: x.sort_values(ascending=False))
     if len(out) >= num_samples:

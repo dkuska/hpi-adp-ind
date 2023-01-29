@@ -34,7 +34,7 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_folder: str) -> str:
 
     with open(output_csv, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
-        writer.writerow(['file_names', 'sampling_method', "sampling_rate", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
+        writer.writerow(['file_names', 'sampling_method', "budgets", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
 
         baseline: MetanomeRun = runs.baseline
 
@@ -69,8 +69,8 @@ def plotting_preprocessing_evaluation_dataframe(df: pd.DataFrame, arity: str) ->
         
         return df_unary, df_nary
     else:
-        # NOTE: This is a temporary fix and only works if we use only a single sampling method and rate per experiment
-        df['sampling_rate'] = df['sampling_rate'].map(lambda x: x.split('; ')[0])
+        # NOTE: This is a temporary fix and only works if we use only a single sampling method and budget per experiment
+        df['budgets'] = df['budgets'].map(lambda x: x.split('; ')[0])
         df['sampling_method'] = df['sampling_method'].map(lambda x: x.split('; ')[0])
         
         return df, None
@@ -94,7 +94,7 @@ def make_plots(output_file: str) -> list[str]:
         onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
         plot_paths.append(onionplot_path)
         
-    groupby_attributes = ['sampling_method', 'sampling_rate']
+    groupby_attributes = ['sampling_method', 'budgets']
     plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
     plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
     plot_paths.append(plot_path)

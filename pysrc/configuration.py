@@ -10,7 +10,7 @@ from dateutil import parser as datetime_parser
 class GlobalConfiguration:
     algorithm: str
     arity: str
-    sampling_rates: list[float]
+    total_budget: list[int]
     sampling_methods: list[str]
 
     header: bool
@@ -47,7 +47,7 @@ class GlobalConfiguration:
         return cls(
             algorithm=algorithm,
             arity=arity,
-            sampling_rates=[0.1, 0.01, 0.001],
+            total_budget=[10000, 100000],
             sampling_methods=['smallest-value', 'longest-value', 'random', 'evenly-spaced', 'first', 'biggest-value'],
             header=cls._construct_from_default(args, 'header', bool, False),
             clip_output=cls._construct_from_default(args, 'clip_output', bool, True),

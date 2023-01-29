@@ -23,7 +23,7 @@ class MetanomeRunConfiguration:
     """Contains configuration information about a Metanome run"""
     algorithm: str
     arity: str
-    sampling_rates: list[float]
+    total_budget: list[int]
     sampling_methods: list[str]
     time: datetime.datetime
 
@@ -41,7 +41,7 @@ class MetanomeRunConfiguration:
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.algorithm, self.arity, tuple(self.sampling_rates), tuple(self.sampling_methods), self.time, self.source_dir,
+        return hash((self.algorithm, self.arity, tuple(self.total_budget), tuple(self.sampling_methods), self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
                      self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
@@ -49,8 +49,8 @@ class MetanomeRunConfiguration:
     def credibility(self) -> float:
         """Get the credibility (i.e. how trustworthy this config is) of the config."""
         # TODO: Actually depend this on the config data
-        # return float(product([rate * 100 for rate in self.sampling_rates]))
-        return sum(self.sampling_rates) / len(self.sampling_rates)
+        # return float(product([budget for budget in self.total_budget]))
+        return sum(self.total_budget) / len(self.total_budget)
 
 @dataclass_json
 @dataclass(frozen=True)
@@ -196,8 +196,8 @@ class MetanomeRunBatch:
 
 
 
-def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool,
-                  is_baseline: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, *, algorithm: str, arity: str, results_folder: str, print_inds: bool,
+                  is_baseline: bool, header: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -226,17 +226,16 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 errors.append(MissingValues(missing_values))
             # TODO: Figure out better way to identify inds. Is this parsing even necessary?
             ind = IND(dependents=[dependant], referenced=[referenced], errors=errors)
-            # ind = f'{dependant_table}.{dependant_column} [= {referenced_table}.{referenced_column}'
 
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            dependant_column = 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            dependant_column = dependant_raw['columnIdentifier'] if header else 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
 
             referenced_raw = line_json['referenced']['columnIdentifiers'][0]
             referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            referenced_column = 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+            referenced_column = referenced_raw['columnIdentifier'] if header else 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
             if algorithm == 'PartialSPIDER':
@@ -252,7 +251,6 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0]
                 dependant_column = dependant_entry['columnIdentifier']
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
                 dependant_list.append(dependant)
 
             referenced_list: list[ColumnInformation] = []
@@ -261,10 +259,8 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0]
                 referenced_column = referenced_entry['columnIdentifier']
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
             ind = IND(dependents=dependant_list, referenced=referenced_list)
 
         elif arity == 'nary' and is_baseline == False:
@@ -272,23 +268,19 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-                dependant_column = 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                dependant_column = dependant_entry['columnIdentifier'] if header else 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
-                # dependant_list.append(f'{dependant_table}.{dependant_column}')
                 dependant_list.append(dependant)
 
             referenced_list = []
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = 'column' + str(
-                    referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
+                referenced_column = referenced_entry['columnIdentifier'] if header else 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
 
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
-                # referenced_list.append(f'{referenced_table}.{referenced_column}')
                 referenced_list.append(referenced)
 
-            # ind = f'{" & ".join(dependant_list)} [= {" & ".join(referenced_list)}'
             ind = IND(dependents=dependant_list, referenced=referenced_list)
         else:
             continue
@@ -309,7 +301,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-        missing_values = 1000 # TODO: Make this configurable and dependent on the sample size
+        missing_values = 10000 # TODO: Make this configurable and dependent on the sample size
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
@@ -318,7 +310,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb: int = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, is_baseline=configuration.is_baseline)]
+    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, configuration.header, is_baseline=configuration.is_baseline)]
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -331,6 +323,9 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                     --skip-differing-lines \
                     -o {output_rule} \
                     --escape {escape} '
+
+    if configuration.header:
+        execute_str += '--header '
 
     if configuration.algorithm == 'BINDER':
         execute_str += f'--algorithm-config DETECT_NARY:{"true" if configuration.arity == "nary" else "false"}'
@@ -358,7 +353,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                            arity=configuration.arity,
                            results_folder=configuration.results_folder,
                            print_inds=configuration.print_inds,
-                           is_baseline=configuration.is_baseline)
+                           is_baseline=configuration.is_baseline,
+                           header=configuration.header)
     return MetanomeRun(configuration=configuration, column_statistics=source_files_column_statistics, results=result)
 
 
@@ -428,7 +424,7 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
     sampled_file_paths = run.configuration.source_files
     sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
 
-    file_names, methods, rates = [], [], []
+    file_names, methods, budgets = [], [], []
     for sampled_file in sampled_file_names:
         split_filename = sampled_file.split(
             '__')  # Detect Column Sampling, as this is evident from the '__' in the file
@@ -441,26 +437,25 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
             split_filename.append(split_metadata[0])
             split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
-            fname, sampling_rate, sampling_method = split_filename
+            fname, budget, sampling_method = split_filename
             fname = fname + '_' + split_metadata[2]
-            sampling_rate = sampling_rate[0] + '.' + sampling_rate[1:]
         else:
-            fname, sampling_rate, sampling_method = sampled_file, '1.0', 'None'
+            fname, budget, sampling_method = sampled_file, str(float('inf')), 'None'
 
         file_names.append(fname)
         methods.append(sampling_method)
-        rates.append(sampling_rate)
+        budgets.append(budget)
 
     if run.configuration.arity == 'unary':
         tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
-        return ['; '.join(file_names), '; '.join(methods), '; '.join(rates), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
 
         return ['; '.join(file_names),
                 '; '.join(methods),\
-                '; '.join(rates), \
+                '; '.join(budgets), \
                 '; '.join([str(tp_i) for tp_i in tp]), \
                 '; '.join([str(fp_i) for fp_i in fp]), \
                 '; '.join([str(fn_i) for fn_i in fn]), \
