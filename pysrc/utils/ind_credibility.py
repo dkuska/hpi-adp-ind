@@ -1,6 +1,7 @@
 from pysrc.models.ind import IND
 from ..models import metanome_run
-import numpy as np
+import pickle
+import pandas as pd
 
 def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun', model) -> float:
     dependents_stats = [next(stat for stat in run.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
@@ -37,17 +38,28 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     #    'left_sampling_rate', 'right_count', 'right_sampling_rate',
     #    'cardinality_ratio', 'sample_size_ratio', 'missing_ratio',
     #    'useless_ratio']
-    
+    with open('/home/nano/projects/hpi-adp-ind/pysrc/utils/ml/maxabsscaler.pkl', 'rb') as file:
+        scaler = pickle.load(file)
     # TODO: Add sampling ratio to dependent stats
-    stats = np.array([missing_values, 
-                      baseline_dependents_stat.count, baseline_dependents_stat.unique_ratio, 
-                      baseline_referenced_stat.count, baseline_dependents_stat.unique_ratio,
-                      dependents_stat.count, dependents_stat.count / baseline_dependents_stat.count, 
-                      referenced_stat.count, referenced_stat.count / baseline_referenced_stat.count,
-                      ratio_of_cardinality, ratio_of_sample_sizes,
-                      missing_ratio, useless_ratio]).reshape(1, -1)
+    stats = pd.DataFrame([[missing_values, 
+                            baseline_dependents_stat.count, baseline_dependents_stat.unique_ratio, 
+                            baseline_referenced_stat.count, baseline_dependents_stat.unique_ratio,
+                            dependents_stat.count, dependents_stat.count / baseline_dependents_stat.count, 
+                            referenced_stat.count, referenced_stat.count / baseline_referenced_stat.count,
+                            ratio_of_cardinality, ratio_of_sample_sizes]], 
+                         columns=["missing_values",
+                            "left_baseline_count","left_baseline_unique_ratio",
+                            "right_baseline_count","right_baseline_unique_ratio",
+                            "left_count","left_sampling_rate",
+                            "right_count","right_sampling_rate",
+                            "cardinality_ratio","sample_size_ratio"])
+                      
+    stats = pd.DataFrame(scaler.transform(stats), columns=stats.columns)
     score = model.predict_proba(stats)
-    return score[-1] # We are only interested in the probability that the IND is a TP
+
+    print(f'naive_score: {(1.0 - missing_values / dependents_stat.unique_count)}, ml_score: {score[0][-1]}')
+    
+    return score[0][-1] * run.configuration.credibility() # We are only interested in the probability that the IND is a TP
     
     
-    # return (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
+    return (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
