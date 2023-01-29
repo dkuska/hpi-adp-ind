@@ -6,6 +6,8 @@ import sys
 from typing import Literal, Optional
 
 import pandas as pd
+
+from pysrc.utils.eprint import eprint
 from ..models.ind import RankedIND
 
 from ..utils.enhanced_json_encoder import (EnhancedJSONDecoder,
@@ -160,12 +162,17 @@ def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interact
     return output_json
 
 
-def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str, top_inds: int) -> str:
-    ranked_inds = experiments.ranked_inds()
+def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str, top_inds: int, allowed_baseline_knowledge: Literal['all', 'count', 'none'] = 'all') -> str:
+    ranked_inds = experiments.ranked_inds(allowed_baseline_knowledge)
     baseline = experiments.baseline
     ranked_inds_object = [RankedIND(ind, credibility, baseline.results.has_ind(ind)) for ind, credibility in ranked_inds.items()]
+    # eprint(ranked_inds_object)
     if mode == 'interactive':
         sorted_ranked_inds = sorted(ranked_inds_object, key=lambda ranked_ind : ranked_ind.credibility, reverse=True)
+        # for ind in sorted_ranked_inds:
+        #     if ind.credibility >= -1.0:
+        #         continue
+        #     eprint(ind)
         # print(sorted_ranked_inds)
         n = 0
         for ranked_ind in sorted_ranked_inds:
@@ -221,7 +228,26 @@ def parse_args() -> argparse.Namespace:
     return args
 
 
+def single_run_results(all_experiments: MetanomeRunBatch, *, interactive: bool, output_sub_directory: str, top_inds: int) -> None:
+    baseline = all_experiments.baseline
+    for run in all_experiments.runs:
+        for allowed_baseline_knowledge in ['all', 'count', 'none']:
+            if run.configuration.is_baseline:
+                continue
+            print(f'******** {allowed_baseline_knowledge=} ********')
+            experiments = MetanomeRunBatch([baseline, run])
+            if interactive:
+                print(f'Results for {run.configuration.sampling_methods=} and {run.configuration.total_budget=}:')
+            ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds, allowed_baseline_knowledge)
+            if interactive:
+                thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]
+                for threshold in thresholds:
+                    evaluate_ind_rankings(ranked_inds_path, threshold)
+
+
 def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, return_path: str, top_inds: int) -> Optional[str]:
+    print('*' * 50)
+    print(f'*** Results for {file=} ***')
     experiments: MetanomeRunBatch = load_experiment_information(json_file=file)
     
     # The file-names of the evaluations should depend on the source file timestamp, not the current timestamp!
@@ -231,6 +257,7 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
     error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
+    single_run_results(experiments, interactive=interactive, output_sub_directory=output_sub_directory, top_inds=top_inds)
     ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
     if interactive:
         thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]

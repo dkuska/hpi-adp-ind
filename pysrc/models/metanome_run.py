@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import statistics
-from typing import Iterator
+from typing import Iterator, Literal
 from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
@@ -14,6 +14,7 @@ from pysrc.models.ind import IND
 from pysrc.models.column_statistics import ColumnStatistic
 
 from pysrc.utils.descriptive_statistics import file_column_statistics
+from pysrc.utils.eprint import eprint
 from pysrc.utils.ind_credibility import ind_credibility
 
 
@@ -160,7 +161,7 @@ class MetanomeRunBatch:
         return results
 
 
-    def ranked_inds(self) -> dict[IND, float]:
+    def ranked_inds(self, allowed_baseline_knowledge: Literal['all', 'count', 'none']) -> dict[IND, float]:
         # Collect INDs
         ind_map: dict[tuple[str, str], IND] = {}  # Map from (dependent, referenced) -> IND
         inds: dict[IND, list[tuple[int, MetanomeRun]]] = {}
@@ -184,7 +185,7 @@ class MetanomeRunBatch:
         baseline = self.baseline
         inds_credibilities = {
                 ind: [
-                    ind_credibility(ind, run, missing_values, baseline)
+                    ind_credibility(ind, run, missing_values, baseline, allowed_baseline_knowledge)
                     for missing_values, run
                     in configMissingValuesPairs
                     ]
@@ -198,6 +199,10 @@ class MetanomeRunBatch:
             inds_credibilities[ind] = [-2.0]
         # Rank INDs by SUM over ALL runs (with value 0.0 for runs that didn't find the IND)
         ranked_inds = { ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0 for ind, credibilities in inds_credibilities.items() }
+        # for ind, cred in ranked_inds.items():
+        #     if cred >= -1.0:
+        #         continue
+        #     eprint(f'{ind=}, {cred=}')
         return ranked_inds
 
 
