@@ -196,8 +196,8 @@ class MetanomeRunBatch:
 
 
 
-def parse_results(result_file_name: str, algorithm: str, arity: str, results_folder: str, print_inds: bool,
-                  is_baseline: bool) -> MetanomeRunResults:
+def parse_results(result_file_name: str, *, algorithm: str, arity: str, results_folder: str, print_inds: bool,
+                  is_baseline: bool, header: bool) -> MetanomeRunResults:
     """Parses result file and returns run results"""
     ind_list: list[IND] = []
     lines: list[str] = []
@@ -230,12 +230,12 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
         elif arity == 'unary' and is_baseline == False:
             dependant_raw = line_json['dependant']['columnIdentifiers'][0]
             dependant_table = dependant_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            dependant_column = dependant_raw['columnIdentifier']
+            dependant_column = dependant_raw['columnIdentifier'] if header else 'column' + str(dependant_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
 
             referenced_raw = line_json['referenced']['columnIdentifiers'][0]
             referenced_table = referenced_raw['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-            referenced_column = referenced_raw['columnIdentifier']
+            referenced_column = referenced_raw['columnIdentifier'] if header else 'column' + str(referenced_raw['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
             referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
 
             if algorithm == 'PartialSPIDER':
@@ -268,7 +268,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             dependant_raw = line_json['dependant']['columnIdentifiers']
             for dependant_entry in dependant_raw:
                 dependant_table = dependant_entry['tableIdentifier'].rsplit('.', 1)[0].split('__', 1)[0]
-                dependant_column = dependant_entry['columnIdentifier']
+                dependant_column = dependant_entry['columnIdentifier'] if header else 'column' + str(dependant_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
                 dependant = ColumnInformation(table_name=dependant_table, column_name=dependant_column)
                 dependant_list.append(dependant)
 
@@ -276,7 +276,7 @@ def parse_results(result_file_name: str, algorithm: str, arity: str, results_fol
             referenced_raw = line_json['referenced']['columnIdentifiers']
             for referenced_entry in referenced_raw:
                 referenced_table = referenced_entry['tableIdentifier'].rsplit('.', 1)[0].split('_', 1)[0]
-                referenced_column = referenced_entry['columnIdentifier']
+                referenced_column = referenced_entry['columnIdentifier'] if header else 'column' + str(referenced_entry['tableIdentifier'].rsplit('.', 1)[0].rsplit('_')[-1])
 
                 referenced = ColumnInformation(table_name=referenced_table, column_name=referenced_column)
                 referenced_list.append(referenced)
@@ -353,7 +353,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                            arity=configuration.arity,
                            results_folder=configuration.results_folder,
                            print_inds=configuration.print_inds,
-                           is_baseline=configuration.is_baseline)
+                           is_baseline=configuration.is_baseline,
+                           header=configuration.header)
     return MetanomeRun(configuration=configuration, column_statistics=source_files_column_statistics, results=result)
 
 
