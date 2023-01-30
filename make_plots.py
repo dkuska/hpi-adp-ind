@@ -88,7 +88,7 @@ def main() -> None:
             current_sampling_method = data.sampling_method
             current_budget = data.budget
             f, axiis = plt.subplots(1, 3, figsize=(15, 10))
-            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}', fontsize=16)
+            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}. Sampling Method: {current_sampling_method}{"" if current_sampling_method in ["evenly-spaced", "random", "first"] else " (Requires sorting the baseline)"}. Available Budget: {current_budget} Values. Normalized.', fontsize=16)
         ax = axiis[
             0 if data.allowed_baseline_knowledge == 'all'
             else 1 if data.allowed_baseline_knowledge == 'count'
@@ -104,7 +104,7 @@ def main() -> None:
         # Remove -2.0 (FN) INDs
         data.inds = [ind for ind in data.inds if ind.credibility > -1.5]
         plot = create_plot(data, ax)
-        plot.set_title(f'{data.sampling_method}, {data.budget}, {data.allowed_baseline_knowledge} (normalized)')
+        plot.set_title(f'Knowledge about the baseline: {data.allowed_baseline_knowledge}')
 
 
 # def get_index(orig: int, /) -> tuple[int, int]:
