@@ -322,6 +322,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
 
     # Calculate File Statistics
     source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, header=configuration.header, is_baseline=configuration.is_baseline)]
+    if configuration.is_baseline:
+        return MetanomeRun(configuration=configuration, column_statistics=source_files_column_statistics, results=[])
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -357,6 +359,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
         execute_str += ' | tail -n 2'
 
     # Run
+    eprint(f'{execute_str=}')
     os.system(execute_str)
     # Parse
     result = parse_results(result_file_name=output_fname + configuration.result_suffix,

@@ -1,4 +1,3 @@
-from typing import Optional
 from dataclasses_json import dataclass_json
 from dataclasses import dataclass
 import sys
@@ -88,23 +87,25 @@ def main() -> None:
             current_sampling_method = data.sampling_method
             current_budget = data.budget
             f, axiis = plt.subplots(1, 3, figsize=(15, 10))
-            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}. Sampling Method: {current_sampling_method}{"" if current_sampling_method in ["evenly-spaced", "random", "first"] else " (Requires sorting the baseline)"}. Available Budget: {current_budget} Values. Normalized.', fontsize=16)
+            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}. Sampling Method: {current_sampling_method}. Budget: {data.budget}. Normalized.', fontsize=16)
         ax = axiis[
             0 if data.allowed_baseline_knowledge == 'all'
             else 1 if data.allowed_baseline_knowledge == 'count'
             else 2
             ]
         # Normalize data
-        max_cred = max(ind.credibility for ind in data.inds)
+        # Budget is upper bound for credibilities
+        max_cred = data.budget  # max(ind.credibility for ind in data.inds)
         if max_cred > 0.0:
             for ind in data.inds:
                 if ind.credibility < 0.0:
                     continue
                 ind.credibility = ind.credibility / max_cred
         # Remove -2.0 (FN) INDs
+        fn_count = sum(1 for ind in data.inds if ind.credibility < -1.5)
         data.inds = [ind for ind in data.inds if ind.credibility > -1.5]
         plot = create_plot(data, ax)
-        plot.set_title(f'Knowledge about the baseline: {data.allowed_baseline_knowledge}')
+        plot.set_title(f'Baseline knowledge: {data.allowed_baseline_knowledge}. FNs: {fn_count}.')
 
 
 # def get_index(orig: int, /) -> tuple[int, int]:

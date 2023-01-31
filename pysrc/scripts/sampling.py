@@ -12,6 +12,8 @@ from pathlib import Path
 
 from collections import defaultdict
 
+from pysrc.utils.eprint import eprint
+
 from ..utils.is_non_zero_file import is_non_zero_file
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
@@ -65,6 +67,8 @@ def sample_csv(file_path: str,
     samples: list[tuple[str, str, int]] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
+    if file_prefix != 'ANALYSIS':
+        return []
     # Initializes the dict with value for no key present
     aggregate_data_per_column: dict[int, list[str]] = defaultdict(list)
 
@@ -77,6 +81,8 @@ def sample_csv(file_path: str,
         aggregate_data_per_column[column_index] = source_df[column].to_list()
 
     for column in aggregate_data_per_column:
+        if column + 1 != 12 and column + 1 != 5:
+            continue
         column_data = aggregate_data_per_column[column]
 
         if config.header:
@@ -318,6 +324,7 @@ def run_dataset_experiments(config: GlobalConfiguration) -> list[str]:
         run_experiments(dataset, config)
         for dataset
         in os.listdir(os.path.join(os.getcwd(), config.source_dir))
+        if dataset == 'ENSEMBL'
     ]
 
 
