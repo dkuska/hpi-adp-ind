@@ -1,3 +1,4 @@
+from typing import Optional
 from dataclasses_json import dataclass_json
 from dataclasses import dataclass
 import sys
@@ -67,17 +68,22 @@ def create_plot(data: Data, axes: axes.Axes) -> axes.Axes:
 
 
 def main() -> None:
+    # font = {'family' : 'normal',
+    #     'weight' : 'bold',
+    #     'size'   : 22}
+    # plt.rc('font', **font)
+    plt.rcParams.update({'font.size': 22})
     current_file_name: str = ''
     current_sampling_method: str = ''
     current_budget: int = 0
     f: Figure | None = None
-    axiis: list[list[axes.Axes]]
+    axiis: Optional[list[axes.Axes]] = None
     for json_data in each_chunk(sys.stdin, '\0'):
         if json_data == '':
             continue
         data: Data = Data.from_json(json_data)
         # Determine axes
-        if current_file_name != data.file or current_sampling_method != data.sampling_method or current_budget != data.budget:
+        if axiis is None or current_file_name != data.file or current_sampling_method != data.sampling_method or current_budget != data.budget:
             if f:
                 plot_path = f'{current_file_name}_{current_sampling_method}_{current_budget}_plots.jpg'
                 f.savefig(plot_path)
@@ -86,8 +92,8 @@ def main() -> None:
             current_file_name = data.file
             current_sampling_method = data.sampling_method
             current_budget = data.budget
-            f, axiis = plt.subplots(1, 3, figsize=(15, 10))
-            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}. Sampling Method: {current_sampling_method}. Budget: {data.budget}. Normalized.', fontsize=16)
+            f, axiis = plt.subplots(1, 3, figsize=(30, 20))
+            f.suptitle(f'Dataset: {current_file_name.rsplit("-", 2)[-1]}. Sampling Method: {current_sampling_method}. Budget: {data.budget}. Normalized.', fontsize=36)
         ax = axiis[
             0 if data.allowed_baseline_knowledge == 'all'
             else 1 if data.allowed_baseline_knowledge == 'count'
@@ -105,7 +111,7 @@ def main() -> None:
         fn_count = sum(1 for ind in data.inds if ind.credibility < -1.5)
         data.inds = [ind for ind in data.inds if ind.credibility > -1.5]
         plot = create_plot(data, ax)
-        plot.set_title(f'Baseline knowledge: {data.allowed_baseline_knowledge}. FNs: {fn_count}.')
+        plot.set_title(f'Baseline knowledge: {data.allowed_baseline_knowledge}. FNs: {fn_count}.', )
 
 
 # def get_index(orig: int, /) -> tuple[int, int]:
