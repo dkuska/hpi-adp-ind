@@ -144,7 +144,7 @@ def make_plot(by_approach: ByApproach, dir: str) -> str:
     ax_precision: axes.Axes
     ax_recall: axes.Axes
     ax_f1: axes.Axes
-    f, axs = plt.subplots(1, 3, figsize=(15, 10))
+    f, axs = plt.subplots(1, 3, figsize=(30, 20))
     ax_precision = axs[0]
     ax_recall = axs[1]
     ax_f1 = axs[2]
@@ -154,7 +154,7 @@ def make_plot(by_approach: ByApproach, dir: str) -> str:
     plot_precision.set_title('Recall')
     plot_f1 = sns.lineplot(data=pd.melt(frame_f1, ['Threshold'], var_name='Method', value_name='F1-Score'), x='Threshold', y='F1-Score', hue='Method', ax=ax_f1)
     plot_f1.set_title('F1-Score')
-    f.suptitle(f'Dataset: {by_approach.tree.config.dataset}. Budget: {by_approach.tree.config.budget}. {by_approach.tree.config.knowledge}.')
+    f.suptitle(f'Dataset: {by_approach.tree.config.dataset}. Budget: {by_approach.tree.config.budget}. {by_approach.tree.config.knowledge}.', fontsize=36)
     # sample_count = np.around(np.logspace(math.log10(1),math.log10(10),6))
     # plot.set(yscale='log')
     # plot.set(yticks=sample_count)
@@ -165,8 +165,9 @@ def make_plot(by_approach: ByApproach, dir: str) -> str:
 
 
 def main() -> None:
+    plt.rcParams.update({'font.size': 22})
     directory_with_files = sys.argv[1]
-    files = [os.path.join(directory_with_files, file) for file in os.listdir(directory_with_files) if file.rsplit('.', 1)[1] == 'txt']
+    files = [os.path.join(directory_with_files, file) for file in os.listdir(directory_with_files) if len(splitted := file.rsplit('.', 1)) > 1 and splitted[1] == 'txt']
     data: list[File] = []
     for file in files:
         with open(file, 'r') as f:
