@@ -34,6 +34,4 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     cred = (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
     if cred < 0:
         eprint(f'Got negative credibility ({cred=}) for {ind=} with {ind.errors=}.\n\t{missing_values=}\n\t{dependents_stat.unique_count=}\n\t{run=}')
-        # eprint(f'{missing_values=}, {dependents_stat.unique_count=}, {run=}, {ind=}')
-        # exit(1)
     return cred

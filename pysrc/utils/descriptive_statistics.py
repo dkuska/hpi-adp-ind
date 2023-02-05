@@ -17,10 +17,6 @@ def file_column_statistics(file_path: str, *, header: bool, delimiter: str =';',
         column_series.sort_values(inplace=True, ascending=True)
         count = column_series.count()
         unique_count = column_series.nunique()
-        # if file_path == '/home/clemens/Dokumente/HPI/WiSe_2022-2023/Approximate_Data_Profiling/GitHub/dkuska/hpi-adp-ind/tmp/COMMENTS__10000_smallest-value_1.csv':
-        #     print(f'{df=}')
-        #     print(f'{unique_count=}, {header=}')
-        #     exit(2)
         min = column_series.iloc[0]
         max = column_series.iloc[count-1]
         
