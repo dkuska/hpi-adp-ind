@@ -1,5 +1,6 @@
 import datetime
 import json
+import math
 from math import isnan
 import os
 from dataclasses import dataclass
@@ -293,7 +294,7 @@ def parse_results(result_file_name: str, *, algorithm: str, arity: str, results_
     return MetanomeRunResults(ind_list)
 
 
-def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool) -> MetanomeRun:
+def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool, largest_unique_count: int) -> MetanomeRun:
     # TODO: Make these configurable
     if configuration.algorithm == 'BINDER':
         algorithm_path = 'BINDER.jar'
@@ -301,7 +302,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-        missing_values = 10000 # TODO: Make this configurable and dependent on the sample size
+        #TODO Probably need the value of the parameter also in the JSON output or?
+        missing_values = math.ceil(0.5*largest_unique_count)
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'

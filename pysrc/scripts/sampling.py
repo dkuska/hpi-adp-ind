@@ -30,7 +30,7 @@ class ColumnBudgetInfo:
 def aggregate_statistic(file_path: str) -> list[ColumnStatistic]:
     return file_column_statistics(file_path, False)
 
-def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int) -> list[list[ColumnBudgetInfo]]:
+def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int, basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
 
     count_columns_not_full = sum(
         1
@@ -41,17 +41,34 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
         if not size_for_column.full_column_fits_in_budget
     )
 
-    if count_columns_not_full == 0:
+    if count_columns_not_full <= 1:
         return size_per_column
+
 
     budget_per_column = math.floor(budget_to_share / count_columns_not_full)
 
     for sizes_for_file in size_per_column:
         for size_for_column in sizes_for_file:
             if not size_for_column.full_column_fits_in_budget:
-                size_for_column.allowed_budget += budget_per_column
+                if size_for_column.allowed_budget > budget_per_column + basic_size:
+                    #size_for_column.allowed_budget = budget_per_column + basic_size
+                    budget_to_share -= budget_per_column
+                else:
+                    size_for_column.full_column_fits_in_budget = True
+                    budget_to_share += (budget_per_column + basic_size)-size_for_column.allowed_budget
 
-    return size_per_column
+    if count_columns_not_full == track_changes:
+        for sizes_for_file in size_per_column:
+            for size_for_column in sizes_for_file:
+                if not size_for_column.full_column_fits_in_budget:
+                    size_for_column.allowed_budget = budget_per_column + basic_size
+        return size_per_column
+
+
+    if budget_per_column == 0:
+        return size_per_column
+    else:
+        return assign_budget(size_per_column, budget_to_share, basic_size+budget_per_column, count_columns_not_full)
 
 def sample_csv(file_path: str,
                sampling_method: str,
@@ -234,8 +251,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         ))
 
     description = [aggregate_statistic(file_path) for file_path in source_files]
-    #TODO calculate the size of the samples
-
 
     # Sampled runs
     # Sample each source file
@@ -245,19 +260,20 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     for sampling_method in config.sampling_methods:
         for budget in config.total_budget:
             new_file_list: list[tuple[str, str, int]] = []
+            track_changes = 0
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
             basic_size = math.floor(budget/len(description))
             for file_index, file_description in enumerate(description):
                 for column_index, column_description in enumerate(file_description):
                     if column_description.unique_count > basic_size:
-                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(basic_size, False))
+                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, False))
 
                     else:
                         size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, True))
                         budget_to_share += basic_size - column_description.unique_count
 
-            size_per_column = assign_budget(size_per_column, budget_to_share)
+            size_per_column = assign_budget(size_per_column, budget_to_share, basic_size, track_changes)
 
             for i, file_path in enumerate(source_files):
                 new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
@@ -295,6 +311,12 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             create_plots=config.create_plots,
             is_baseline=False
         ))
+    #find the largest unique count of a column
+    current_max = 0
+    for file_index, file_description in enumerate(description):
+        for column_index, column_description in enumerate(file_description):
+            if current_max < column_description.unique_count:
+                 current_max = column_description.unique_count
 
     # And run experiment for each
     for configuration in configurations:
@@ -305,7 +327,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             print(f'{current_files_str=}')
             print(f'{output_file_name=}')
         # Execute
-        result = run_metanome(configuration, output_file_name, config.pipe)
+        result = run_metanome(configuration, output_file_name, config.pipe, current_max)
         experiments.append(result)
 
     experiment_batch = MetanomeRunBatch(runs=experiments)
