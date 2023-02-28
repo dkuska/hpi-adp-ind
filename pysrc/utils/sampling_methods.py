@@ -9,7 +9,7 @@ def preProcessData(series: pd.Series) -> pd.Series:
     tmp = tmp.loc[tmp.astype(str).drop_duplicates().index]
     return tmp
 
-def random_sample(data: list[list[str]],
+def random_sample(data: list[str],
                   num_samples: int,
                   num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -20,7 +20,7 @@ def random_sample(data: list[list[str]],
     else:
         return tmp
 
-def first_sample(data: list[list[str]],
+def first_sample(data: list[str],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -31,7 +31,7 @@ def first_sample(data: list[list[str]],
     else:
         return tmp
 
-def smallest_value_sample(data: list[list[str]],
+def smallest_value_sample(data: list[str],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -44,7 +44,7 @@ def smallest_value_sample(data: list[list[str]],
         return out.iloc[:num_samples]
     else:
         return out
-def biggest_value_sample(data: list[list[str]],
+def biggest_value_sample(data: list[str],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -57,7 +57,7 @@ def biggest_value_sample(data: list[list[str]],
         return out.iloc[:num_samples]
     else:
         return out
-def longest_value_sample(data: list[list[str]],
+def longest_value_sample(data: list[str],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -70,7 +70,7 @@ def longest_value_sample(data: list[list[str]],
     else:
         return df
 
-def shortest_value_sample(data: list[list[str]],
+def shortest_value_sample(data: list[str],
                  num_samples: int,
                  num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -84,7 +84,7 @@ def shortest_value_sample(data: list[list[str]],
         return df
 
 
-def evenly_spaced_sample(data: list[list[str]],
+def evenly_spaced_sample(data: list[str],
                          num_samples: int,
                          num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
@@ -98,7 +98,7 @@ def evenly_spaced_sample(data: list[list[str]],
 
 
 sampling_methods_dict: dict[str,
-                            Callable[[list[list[str]], int, int],
+                            Callable[[list[str], int, int],
                                      pd.Series]] = {
     'random': random_sample,
     'first': first_sample,
