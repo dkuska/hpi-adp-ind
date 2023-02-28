@@ -13,6 +13,7 @@ from pysrc.models.column_information import ColumnInformation
 from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingValues
 from pysrc.models.ind import IND
 from pysrc.models.column_statistics import ColumnStatistic
+from pysrc.utils.dataclass_json import DataclassJson
 
 from pysrc.utils.descriptive_statistics import file_column_statistics
 from pysrc.utils.ind_credibility import ind_credibility
@@ -20,7 +21,7 @@ from pysrc.utils.ind_credibility import ind_credibility
 
 @dataclass_json
 @dataclass(frozen=True)
-class MetanomeRunConfiguration:
+class MetanomeRunConfiguration(DataclassJson):
     """Contains configuration information about a Metanome run"""
     algorithm: str
     arity: str
@@ -56,7 +57,7 @@ class MetanomeRunConfiguration:
 
 @dataclass_json
 @dataclass(frozen=True)
-class MetanomeRunResults:
+class MetanomeRunResults(DataclassJson):
     inds: list[IND]
 
     def has_ind(self, other_ind: IND) -> bool:
@@ -108,7 +109,7 @@ class MetanomeRunResults:
 
 @dataclass_json
 @dataclass(frozen=True)
-class MetanomeRun:
+class MetanomeRun(DataclassJson):
     configuration: MetanomeRunConfiguration
     column_statistics: list[ColumnStatistic]
     results: MetanomeRunResults
@@ -116,7 +117,7 @@ class MetanomeRun:
 
 @dataclass_json
 @dataclass(frozen=True)
-class MetanomeRunBatch:
+class MetanomeRunBatch(DataclassJson):
     runs: list[MetanomeRun]
 
     def __len__(self) -> int:

@@ -3,8 +3,10 @@ from dataclasses import dataclass
 from typing import Literal
 from dataclasses_json import dataclass_json
 
+from pysrc.utils.dataclass_json import DataclassJson
+
 @dataclass_json
-class ErrorMetric(ABC):
+class ErrorMetric(ABC, DataclassJson):
     pass
 
 

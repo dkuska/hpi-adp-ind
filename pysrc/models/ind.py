@@ -4,11 +4,12 @@ from dataclasses_json import dataclass_json
 
 from pysrc.models.column_information import ColumnInformation
 from pysrc.models.errors import ErrorMetric
+from pysrc.utils.dataclass_json import DataclassJson
 
 
 @dataclass_json
 @dataclass(frozen=True)
-class IND:
+class IND(DataclassJson):
     """Represents a single, nary ind"""
     dependents: list[ColumnInformation]
 
@@ -29,7 +30,7 @@ class IND:
 
 @dataclass_json
 @dataclass(frozen=True)
-class RankedIND:
+class RankedIND(DataclassJson):
     ind: IND
     credibility: float
     is_tp: Optional[bool]

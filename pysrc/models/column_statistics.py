@@ -1,11 +1,13 @@
 from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 
+from pysrc.utils.dataclass_json import DataclassJson
+
 from .column_information import ColumnInformation
 
 @dataclass_json
 @dataclass(frozen=True)
-class ColumnStatistic:
+class ColumnStatistic(DataclassJson):
     column_information: ColumnInformation
     count: int
     unique_count: int
