@@ -2,7 +2,6 @@ import argparse
 import csv
 from dataclasses import dataclass
 import itertools
-import json
 import math
 import os
 import uuid
@@ -27,8 +26,8 @@ class ColumnBudgetInfo:
     allowed_budget: int
     full_column_fits_in_budget: bool
 
-def aggregate_statistic(file_path: str) -> list[ColumnStatistic]:
-    return file_column_statistics(file_path, False)
+def aggregate_statistic(file_path: str, header: bool) -> list[ColumnStatistic]:
+    return file_column_statistics(file_path, header=header)
 
 def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int, basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
 
@@ -215,7 +214,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         if f.rsplit('.')[-1] == 'csv'
     ]
 
-    description = [aggregate_statistic(file_path) for file_path in source_files]
+    description = [aggregate_statistic(file_path, config.header) for file_path in source_files]
 
     # find the largest unique count of a column
     largest_unique_count = max(column_description.unique_count for file_description in description for column_description in file_description)

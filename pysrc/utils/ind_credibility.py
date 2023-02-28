@@ -1,4 +1,5 @@
 from pysrc.models.ind import IND
+from pysrc.utils.eprint import eprint
 from ..models import metanome_run
 
 
@@ -30,4 +31,7 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     if missing_values > baseline_referenced_stat.unique_count - referenced_stat.unique_count:
         # There are more missing values than there are values that are not in the sample of the right hand side
         return nan
-    return (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
+    cred = (1.0 - missing_values / dependents_stat.unique_count) * run.configuration.credibility()
+    if cred < 0:
+        eprint(f'Got negative credibility ({cred=}) for {ind=} with {ind.errors=}.\n\t{missing_values=}\n\t{dependents_stat.unique_count=}\n\t{run=}')
+    return cred

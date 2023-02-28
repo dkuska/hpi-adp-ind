@@ -1,23 +1,20 @@
 import argparse
 import csv
-from dataclasses import dataclass
 import json
 import os
 import sys
 from typing import Literal, Optional
 
 import pandas as pd
-from pysrc.models.ind import IND, RankedIND
+from ..models.ind import RankedIND
 
-from pysrc.utils.enhanced_json_encoder import (EnhancedJSONDecoder,
-                                               EnhancedJSONEncoder)
+from ..utils.enhanced_json_encoder import (EnhancedJSONDecoder,
+                                           EnhancedJSONEncoder)
 
 from ..configuration import GlobalConfiguration
 from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
                                    run_as_compared_csv_line)
-from ..utils.plots import (create_onion_plot, create_plot,
-                           create_PrecisionRecallF1_lineplot,
-                           create_TpFpFn_stacked_barplot)
+from ..utils.plots import (create_TpFpFn_stacked_barplot_by_method, create_plot, plot_missing_values)
 
 
 def load_experiment_information(json_file: str) -> MetanomeRunBatch:
@@ -33,7 +30,10 @@ def create_evaluation_csv(runs: MetanomeRunBatch, output_folder: str) -> str:
 
     with open(output_csv, 'w') as csv_output:
         writer = csv.writer(csv_output, quoting=csv.QUOTE_ALL)
-        writer.writerow(['file_names', 'sampling_method', "budgets", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
+        if runs.baseline.configuration.arity == 'unary':
+            writer.writerow(['file_names', 'sampling_method', "budgets", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1', 'mean_tp_missing_values', 'mean_fp_missing_values'])
+        else:
+            writer.writerow(['file_names', 'sampling_method', "budgets", 'tp', 'fp', 'fn', 'precision', 'recall', 'f1'])
 
         baseline: MetanomeRun = runs.baseline
 
@@ -82,25 +82,42 @@ def make_plots(output_file: str) -> list[str]:
     
     arity = 'unary' if 'unary' in output_file.rsplit(os.sep, 1)[1] else 'nary'
     
-    df = pd.read_csv(os.path.join(output_file, 'data.csv'))
+    df: pd.DataFrame = pd.read_csv(os.path.join(output_file, 'data.csv'))
        
     # Preprocessing of DataFrames, df_nary is None if arity == 'unary'
     df_original, df_nary = plotting_preprocessing_evaluation_dataframe(df, arity)
     
-    if arity == 'nary':
-        plot_fname = f'{plot_prefix}_onionPlot.jpg'
-        groupby_attributes = ['num_sampled_files']
-        onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
-        plot_paths.append(onionplot_path)
-        
-    groupby_attributes = ['sampling_method', 'budgets']
+    # if arity == 'nary':
+    #     plot_fname = f'{plot_prefix}_onionPlot.jpg'
+    #     groupby_attributes = ['num_sampled_files']
+    #     onionplot_path = create_plot(df_nary, groupby_attributes, create_onion_plot, plot_prefix, plot_fname)
+    #     plot_paths.append(onionplot_path)
+
+    sampling_methods: list[str] = []
+    for sampling_method, _ in df_original.groupby('sampling_method'):
+        sampling_methods.append(sampling_method)
+
+    # for sampling_method, _ in df_original.groupby('sampling_method'):
+    #     print(f'{sampling_method=}')
+    #     plot_fname = f'{plot_prefix}_stackedBarPlots_detailed_{sampling_method}_test.jpg'
+    #     plot_path = create_plot(df_original, [sampling_method], create_TpFpFn_stacked_barplot_by_method, plot_prefix, plot_fname)
+    #     plot_paths.append(plot_path)
     plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
+    plot_path = create_plot(df_original, sampling_methods, create_TpFpFn_stacked_barplot_by_method, plot_prefix, plot_fname)
     plot_paths.append(plot_path)
+
+    plot_fname = f'{plot_prefix}_missing_values.jpg'
+    plot_path = plot_missing_values(df_original, plot_folder=plot_prefix, plot_fname=plot_fname)
+    plot_paths.append(plot_path)
+
+    # groupby_attributes = ['sampling_method', 'budgets']
+    # plot_fname = f'{plot_prefix}_stackedBarPlots_detailed.jpg'
+    # plot_path = create_plot(df_original, groupby_attributes, create_TpFpFn_stacked_barplot, plot_prefix, plot_fname)
+    # plot_paths.append(plot_path)
     
-    plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
-    plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
-    plot_paths.append(plot_path)
+    # plot_fname = f'{plot_prefix}_linePlots_detailed.jpg'
+    # plot_path = create_plot(df_original, groupby_attributes, create_PrecisionRecallF1_lineplot, plot_prefix, plot_fname)
+    # plot_paths.append(plot_path)
    
     # groupby_attributes = ['num_sampled_files']
     # plot_fname = f'{output_file}_stackedBarPlots_simplified.jpg'

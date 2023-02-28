@@ -4,7 +4,7 @@ from pysrc.utils.is_non_zero_file import is_non_zero_file
 from ..models.column_statistics import ColumnStatistic
 from ..models.column_information import ColumnInformation
 
-def file_column_statistics(file_path: str, header: bool, *, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
+def file_column_statistics(file_path: str, *, header: bool, delimiter: str =';', escapechar: str ='\\', is_baseline: bool = False) -> list[ColumnStatistic]:
     descriptions = []
     df = pd.read_csv(file_path, delimiter=delimiter, escapechar=escapechar, dtype=str, on_bad_lines='skip', header='infer' if header else None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
     

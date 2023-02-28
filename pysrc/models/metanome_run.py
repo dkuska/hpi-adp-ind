@@ -165,13 +165,14 @@ class MetanomeRunBatch:
     def ranked_inds(self) -> dict[IND, float]:
         # Collect INDs
         ind_map: dict[tuple[str, str], IND] = {}  # Map from (dependent, referenced) -> IND
+        inds: dict[IND, list[tuple[int, MetanomeRun]]] = {}
         for run in self.runs:
             for ind in run.results.inds:
                 if (str(ind.dependents), str(ind.referenced)) not in ind_map:
                     clean_ind = IND(dependents=ind.dependents, referenced=ind.referenced)
                     ind_map[(str(ind.dependents), str(ind.referenced))] = clean_ind
+                    inds[clean_ind] = []
 
-        inds: dict[IND, list[tuple[int, MetanomeRun]]] = {}
         for run in self.runs:
             # Skip baseline (it won't be available in production)
             # TODO: Is this correct behavior? Not sure, but otherwise we'll get *every* TP IND as we're checking the baseline.
@@ -179,7 +180,7 @@ class MetanomeRunBatch:
                 continue
             for ind in run.results.inds:
                 clean_ind = ind_map[(str(ind.dependents), str(ind.referenced))]
-                if clean_ind not in inds: inds[clean_ind] = []
+                # if clean_ind not in inds: inds[clean_ind] = []
                 inds[clean_ind].append((next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error), run))
         # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
         baseline = self.baseline
@@ -192,6 +193,11 @@ class MetanomeRunBatch:
                 for ind, configMissingValuesPairs
                 in inds.items()
             }
+        for ind in inds_credibilities:
+            if len(inds_credibilities[ind]) > 0:
+                continue
+            # When this IND was not found in the runs, set -2.
+            inds_credibilities[ind] = [-2.0]
         # Rank INDs by SUM over ALL runs (with value 0.0 for runs that didn't find the IND)
         ranked_inds = { ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0 for ind, credibilities in inds_credibilities.items() }
         return ranked_inds
@@ -313,7 +319,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb: int = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, configuration.header, is_baseline=configuration.is_baseline)]
+    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, header=configuration.header, is_baseline=configuration.is_baseline)]
 
     # Construct Command
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
@@ -364,15 +370,18 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
 # For unary INDs, this method returns absolute counts for TP, FP, FN, etc.
 def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
     tp, fp = 0, 0
+    sum_tp_missing_values, sum_fp_missing_values = 0, 0
     num_inds = len(inds)
 
     for ind in inds:
         if baseline.has_ind(ind):
             ind.errors.append(INDType('TP'))
             tp += 1
+            sum_tp_missing_values += next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error)
         else:
             ind.errors.append(INDType('FP'))
             fp += 1
+            sum_fp_missing_values += next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error)
 
     fn = len(baseline.inds) - tp
 
@@ -380,10 +389,12 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
         precision = tp / (tp + fp) if tp + fp != 0 else float('nan')
         recall = tp / (tp + fn) if tp + fn != 0 else float('nan')
         f1 = 2 * (precision * recall) / (precision + recall) if recall + precision != 0 else float('nan')
+        mean_tp_missing_values = sum_tp_missing_values / tp if tp > 0 else float('nan')
+        mean_fp_missing_values = sum_fp_missing_values / fp if fp > 0 else float('nan')
     else:
-        precision, recall, f1 = 0, 0, 0
+        precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = 0, 0, 0, 0, 0
 
-    return tp, fp, fn, precision, recall, f1
+    return tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values
 
 
 # For nary INDs, this returns lists with counts for each arity
@@ -450,8 +461,8 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         budgets.append(budget)
 
     if run.configuration.arity == 'unary':
-        tp, fp, fn, precision, recall, f1 = compare_csv_line_unary(run.results.inds, baseline)
-        return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}']
+        tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = compare_csv_line_unary(run.results.inds, baseline)
+        return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}', f'{mean_tp_missing_values:.3f}', f'{mean_fp_missing_values:.3f}']
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
