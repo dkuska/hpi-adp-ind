@@ -215,6 +215,12 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         if f.rsplit('.')[-1] == 'csv'
     ]
 
+    description = [aggregate_statistic(file_path) for file_path in source_files]
+
+    # find the largest unique count of a column
+    largest_unique_count = max(column_description.unique_count for file_description in description for column_description in file_description)
+    allowed_missing_values = math.ceil(0.5*largest_unique_count)
+
     configurations: list[MetanomeRunConfiguration] = []
 
     
@@ -236,6 +242,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             arity=config.arity,
             total_budget=used_budget,
             sampling_methods=used_sampling_methods,
+            allowed_missing_values=allowed_missing_values,
             time=config.now,
             source_dir=config.source_dir,
             source_files=file_combination,
@@ -249,8 +256,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             create_plots=config.create_plots,
             is_baseline=True,
         ))
-
-    description = [aggregate_statistic(file_path) for file_path in source_files]
 
     # Sampled runs
     # Sample each source file
@@ -298,6 +303,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             arity=config.arity,
             total_budget=used_budget,
             sampling_methods=used_sampling_methods,
+            allowed_missing_values=allowed_missing_values,
             time=config.now,
             source_dir=config.source_dir,
             source_files=file_combination,
@@ -311,12 +317,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             create_plots=config.create_plots,
             is_baseline=False
         ))
-    #find the largest unique count of a column
-    current_max = 0
-    for file_index, file_description in enumerate(description):
-        for column_index, column_description in enumerate(file_description):
-            if current_max < column_description.unique_count:
-                 current_max = column_description.unique_count
 
     # And run experiment for each
     for configuration in configurations:
@@ -327,7 +327,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             print(f'{current_files_str=}')
             print(f'{output_file_name=}')
         # Execute
-        result = run_metanome(configuration, output_file_name, config.pipe, current_max)
+        result = run_metanome(configuration, output_file_name, config.pipe)
         experiments.append(result)
 
     experiment_batch = MetanomeRunBatch(runs=experiments)

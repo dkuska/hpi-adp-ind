@@ -26,6 +26,7 @@ class MetanomeRunConfiguration:
     arity: str
     total_budget: list[int]
     sampling_methods: list[str]
+    allowed_missing_values: int
     time: datetime.datetime
 
     source_dir: str
@@ -42,7 +43,7 @@ class MetanomeRunConfiguration:
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.algorithm, self.arity, tuple(self.total_budget), tuple(self.sampling_methods), self.time, self.source_dir,
+        return hash((self.algorithm, self.arity, tuple(self.total_budget), tuple(self.sampling_methods), self.allowed_missing_values, self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
                      self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))
@@ -294,7 +295,7 @@ def parse_results(result_file_name: str, *, algorithm: str, arity: str, results_
     return MetanomeRunResults(ind_list)
 
 
-def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool, largest_unique_count: int) -> MetanomeRun:
+def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pipe: bool) -> MetanomeRun:
     # TODO: Make these configurable
     if configuration.algorithm == 'BINDER':
         algorithm_path = 'BINDER.jar'
@@ -302,8 +303,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     elif configuration.algorithm == 'PartialSPIDER':
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
-        #TODO Probably need the value of the parameter also in the JSON output or?
-        missing_values = math.ceil(0.5*largest_unique_count)
+    else:
+        raise ValueError(configuration.algorithm)
 
     metanome_cli_path = 'metanome-cli.jar'
     separator = '\\;'
@@ -338,7 +339,7 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                         CLEAN_TEMP:true,\
                         MEMORY_CHECK_FREQUENCY:100'
         if not configuration.is_baseline:
-            execute_str += f',MAX_NUMBER_MISSING_VALUES:{missing_values}'
+            execute_str += f',MAX_NUMBER_MISSING_VALUES:{configuration.allowed_missing_values}'
         else:
             execute_str += ',MAX_NUMBER_MISSING_VALUES:0'
         
