@@ -127,7 +127,7 @@ def sample_csv(file_path: str,
         with open(new_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')
             if config.header:
-                writer.writerow([file_header])
+                writer.writerow([file_header]) # pyright: ignore [reportUnboundVariable]
 
             empty_str = ''
             # Changed for better readability
