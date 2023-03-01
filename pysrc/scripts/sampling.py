@@ -186,7 +186,7 @@ def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: G
             path_to_data = current_tuple[0]
             # TODO add handling of headers in files
             df = pd.read_csv(path_to_data, sep=';', header='infer' if config.header else None, on_bad_lines='skip')
-            numeric_columns = df.select_dtypes(include=np.number).columns.tolist()
+            numeric_columns = df.select_dtypes(include=np.number).columns.tolist() # type: ignore
             categorical_columns = df.select_dtypes(include='object').columns.tolist()
 
             if len(numeric_columns) == 1:
