@@ -86,13 +86,13 @@ def sample_csv(file_path: str,
                sampling_method: str,
                budget: int,
                size_per_column: list[ColumnBudgetInfo],
-               config: GlobalConfiguration) -> list[tuple[str, str, int]]:
+               config: GlobalConfiguration) -> list[str]:
     """Sample every single column of file separately with a certain method and budget
-    and create a new tmp file for every column. Returns a list of tuples including
-    the path, method, budget of the column of the sampled file.
+    and create a new tmp file for every column.
+    Returns a list of the path names of the sampled columns.
     """
 
-    samples: list[tuple[str, str, int]] = []
+    sampled_file_names: list[str] = []
 
     file_prefix = file_path.rsplit('/', 1)[1].rsplit('.', 1)[0]
     # Initializes the dict with value for no key present
@@ -137,10 +137,9 @@ def sample_csv(file_path: str,
                     continue
                 writer.writerow([sampled_data.iloc[row_index]])
 
-        out_tuple = (new_file_path, sampling_method, budget)
-        samples.append(out_tuple)
+        sampled_file_names.append(new_file_path)
 
-    return samples
+    return sampled_file_names
 
 
 def create_result_json(dataset: str, runs: MetanomeRunBatch,
@@ -238,45 +237,34 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     
     
     # Baseline
-    baseline_set: list[list[tuple[str, str, float]]] = [
-        [(src_file, 'None', 1.0)]
-        for src_file
-        in source_files
-    ]
-    # Add Configuration for baseline
-    for baseline_tuple in itertools.product(*baseline_set):
-        file_combination: list[str]
-        used_sampling_methods: list[str]
-        used_budget: list[int]
-        file_combination, used_sampling_methods, used_budget = zip(*baseline_tuple)
-        configurations.append(MetanomeRunConfiguration(
-            algorithm=config.algorithm,
-            arity=config.arity,
-            total_budget=used_budget,
-            sampling_methods=used_sampling_methods,
-            allowed_missing_values=allowed_missing_values,
-            time=config.now,
-            source_dir=config.source_dir,
-            source_files=file_combination,
-            tmp_folder=config.tmp_folder,
-            results_folder=config.results_folder,
-            result_suffix=config.results_suffix,
-            output_folder=config.output_folder,
-            clip_output=config.clip_output,
-            header=config.header,
-            print_inds=config.print_inds,
-            create_plots=config.create_plots,
-            is_baseline=True,
-        ))
+    configurations.append(MetanomeRunConfiguration(
+        algorithm=config.algorithm,
+        arity=config.arity,
+        total_budget=None,
+        sampling_method='None',
+        allowed_missing_values=allowed_missing_values,
+        time=config.now,
+        source_dir=config.source_dir,
+        source_files=source_files,
+        tmp_folder=config.tmp_folder,
+        results_folder=config.results_folder,
+        result_suffix=config.results_suffix,
+        output_folder=config.output_folder,
+        clip_output=config.clip_output,
+        header=config.header,
+        print_inds=config.print_inds,
+        create_plots=config.create_plots,
+        is_baseline=True,
+    ))
 
     # Sampled runs
     # Sample each source file
     # Note: New approach: Group by sampling approach and budget already during sample creation
     # This replaces the need for get_file_combinations later on
-    samples: list[list[tuple[str, str, int]]] = []
+    experiment_setups: list[tuple[list[str], str, int]] = []
     for sampling_method in config.sampling_methods:
         for budget in config.total_budget:
-            new_file_list: list[tuple[str, str, int]] = []
+            experiment_setup: tuple[list[str], str, int] = ([], sampling_method, budget)
             # Variables for the fair sampling
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
@@ -311,8 +299,8 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
 
 
             for i, file_path in enumerate(source_files):
-                new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
-            samples.append(new_file_list)
+                experiment_setup[0].extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
+            experiment_setups.append(experiment_setup)
 
     # Note: Old approach
     # for i, file_path in enumerate(source_files):
@@ -325,14 +313,14 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     # TODO change to clever sampling schema
     # file_combinations_to_test = get_file_combinations(samples, config)
     # for file_combination_setup in file_combinations_to_test:
-    for file_combination_setup in samples:
+    for experiment_setup in experiment_setups:
         # TODO: Split this also by column type
-        file_combination, used_sampling_methods, used_budget = zip(*file_combination_setup)
+        file_combination, used_sampling_method, used_budget = experiment_setup
         configurations.append(MetanomeRunConfiguration(
             algorithm=config.algorithm,
             arity=config.arity,
             total_budget=used_budget,
-            sampling_methods=used_sampling_methods,
+            sampling_method=used_sampling_method,
             allowed_missing_values=allowed_missing_values,
             time=config.now,
             source_dir=config.source_dir,
