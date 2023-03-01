@@ -129,9 +129,8 @@ def sample_csv(file_path: str,
                 writer.writerow([file_header]) # pyright: ignore [reportUnboundVariable]
 
             empty_str = ''
-            # Changed for better readability
             for row_index in range(0, len(sampled_data)):
-                #TODO Create Testcases to check if this always works should avoid writing empty lines into the sampled data
+                # TODO: Create Testcases to check if this always works should avoid writing empty lines into the sampled data
                 if sampled_data.iloc[row_index] == empty_str:
                     continue
                 writer.writerow([sampled_data.iloc[row_index]])
@@ -148,14 +147,10 @@ def create_result_json(dataset: str, runs: MetanomeRunBatch,
 
     output_path = os.path.join(os.getcwd(), config.output_folder, dataset, config.result_output_folder_name)
     Path(output_path).mkdir(parents=True, exist_ok=True)
-    # output_path = os.path.join(os.getcwd(), config.output_folder, output_file)
-    output_json = f'{output_path}{os.sep}data.json'
-    # output_json = f'{output_path}.json'
+    output_json = os.path.join(output_path, 'data.json')
 
     with open(output_json, 'w', encoding='utf-8') as json_file:
         json_file.write(runs.to_json())
-        # json.dump(runs, json_file,
-        #           ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
 
     return output_json
 
@@ -173,42 +168,6 @@ def clean_results(results_folder: str) -> None:
     result_files = [f for f in os.listdir(os.path.join(os.getcwd(), results_folder))]
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
-
-# NOTE: NOT IN USE CURRENTLY
-def get_file_combinations(samples: list[list[tuple[str, str, float]]], config: GlobalConfiguration) \
-        -> list[list[tuple[str, str, float]]]:
-    data_type_dict: dict[str, list[tuple[int, int]]] = {}
-    for num_files_index in range(0, len(samples)):
-        for sample_file_index in range(0, len(samples[num_files_index])):
-
-            current_tuple = samples[num_files_index][sample_file_index]
-            path_to_data = current_tuple[0]
-            # TODO add handling of headers in files
-            df = pd.read_csv(path_to_data, sep=';', header='infer' if config.header else None, on_bad_lines='skip')
-            numeric_columns = df.select_dtypes(include=np.number).columns.tolist() # type: ignore
-            categorical_columns = df.select_dtypes(include='object').columns.tolist()
-
-            if len(numeric_columns) == 1:
-                dtype = "number"
-            elif len(categorical_columns) == 1:
-                dtype = "object"
-            else:
-                dtype = "other"
-
-            if dtype in data_type_dict.keys():
-                data_type_dict[dtype].append((num_files_index, sample_file_index))
-            else:
-                data_type_dict[dtype] = [(num_files_index, sample_file_index)]
-
-    datatype_tuples = []
-    for columns_for_datatype in data_type_dict.values():
-        temp_list = []
-        for column_for_datatype in columns_for_datatype:
-            temp_list.append(samples[column_for_datatype[0]][column_for_datatype[1]])
-
-        datatype_tuples.append(temp_list)
-
-    return datatype_tuples
 
 
 def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
