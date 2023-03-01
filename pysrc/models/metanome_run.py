@@ -298,9 +298,6 @@ def parse_results(result_file_name: str, *, algorithm: str, arity: str, results_
 
         ind_list.append(ind)
 
-    if print_inds:
-        print(ind_list)
-
     return MetanomeRunResults(ind_list)
 
 

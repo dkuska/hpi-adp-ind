@@ -27,8 +27,6 @@ class ColumnBudgetInfo:
     allowed_budget: int
     full_column_fits_in_budget: bool
 
-def aggregate_statistic(file_path: str, header: bool) -> list[ColumnStatistic]:
-    return file_column_statistics(file_path, header=header)
 
 def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int, basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
 
@@ -224,18 +222,16 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         os.path.join(source_dir, f)
         for f
         in os.listdir(source_dir)
-        if f.rsplit('.')[-1] == 'csv'
+        if os.path.splitext(f)[1].lower() == '.csv'
     ]
 
-    description = [aggregate_statistic(file_path, config.header) for file_path in source_files]
+    column_statistics = [file_column_statistics(file_path, header=config.header) for file_path in source_files]
 
     # find the largest unique count of a column
-    largest_unique_count = max(column_description.unique_count for file_description in description for column_description in file_description)
+    largest_unique_count = max(column_statistic.unique_count for column_statistics_in_file in column_statistics for column_statistic in column_statistics_in_file)
     allowed_missing_values = math.ceil(0.5*largest_unique_count)
 
     configurations: list[MetanomeRunConfiguration] = []
-
-    
     
     # Baseline
     configurations.append(MetanomeRunConfiguration(
@@ -270,11 +266,11 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
             # Calculates the budget per Column if all column would get the same budget
-            column_count = sum(len(file) for file in description)
+            column_count = sum(len(file) for file in column_statistics)
 
             basic_size = math.floor(budget/column_count)
 
-            for file_index, file_description in enumerate(description):
+            for file_index, file_description in enumerate(column_statistics):
                 for column_index, column_description in enumerate(file_description):
                     # Checks if the basic size is enough to represent all unique values
                     # if it's not enough write the required size into the ColumnBudgetInfo
@@ -303,17 +299,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
                 experiment_setup[0].extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
             experiment_setups.append(experiment_setup)
 
-    # Note: Old approach
-    # for i, file_path in enumerate(source_files):
-    #     for sampling_method in config.sampling_methods:
-    #         for budget in config.total_budget:
-    #             # Sample
-    #             new_file_list = sample_csv(file_path, sampling_method, budget, config)
-    #             samples.append(new_file_list)
-
-    # TODO change to clever sampling schema
-    # file_combinations_to_test = get_file_combinations(samples, config)
-    # for file_combination_setup in file_combinations_to_test:
     for experiment_setup in experiment_setups:
         # TODO: Split this also by column type
         file_combination, used_sampling_method, used_budget = experiment_setup
@@ -339,15 +324,15 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
 
     # And run experiment for each
     for configuration in configurations:
-        current_files_str = ' '.join(configuration.source_files)
-
         output_file_name = str(uuid.uuid4())
-        if configuration.print_inds:
-            print(f'{current_files_str=}')
-            print(f'{output_file_name=}')
         # Execute
         result = run_metanome(configuration, output_file_name, config.pipe)
         experiments.append(result)
+        # Print if necessary
+        if configuration.print_inds:
+            print(f'INDs found for {configuration.sampling_method} with budget {configuration.total_budget}:')
+            for ind in result.results.inds:
+                print(f'\t{ind} (Missing Values: {ind.missing_values("object")})')
 
     experiment_batch = MetanomeRunBatch(runs=experiments)
 
@@ -376,7 +361,7 @@ def main() -> None:
     config = GlobalConfiguration.default(vars(args))
     json_file_paths = run_dataset_experiments(config)
     json_file_paths_string = ('\0' if config.pipe else '\n').join(json_file_paths)
-    if args.pipe:
+    if config.pipe:
         print(json_file_paths_string)
     else:
         print(f'JSON files:\n{json_file_paths_string}')
