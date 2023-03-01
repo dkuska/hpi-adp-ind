@@ -165,14 +165,14 @@ def create_result_json(dataset: str, runs: MetanomeRunBatch,
 def clean_tmp_csv(tmp_folder: str) -> None:
     csv_files = [
         f
-        for f in os.listdir(tmp_folder)
-        if f.rsplit('.')[1] == 'csv']
+        for f in os.listdir(os.path.join(os.getcwd(), tmp_folder))
+        if os.path.splitext(f)[1].lower() == '.csv']
     for tmp_file in csv_files:
         os.remove(os.path.join(os.getcwd(), tmp_folder, tmp_file))
 
 
 def clean_results(results_folder: str) -> None:
-    result_files = [f for f in os.listdir(results_folder)]
+    result_files = [f for f in os.listdir(os.path.join(os.getcwd(), results_folder))]
     for tmp_file in result_files:
         os.remove(os.path.join(os.getcwd(), results_folder, tmp_file))
 
