@@ -1,9 +1,9 @@
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Literal, Optional
 from dataclasses_json import dataclass_json
 
 from pysrc.models.column_information import ColumnInformation
-from pysrc.models.errors import ErrorMetric
+from pysrc.models.errors import ErrorMetric, MissingValues
 from pysrc.utils.dataclass_json import DataclassJson
 
 
@@ -26,6 +26,15 @@ class IND(DataclassJson):
     
     def arity(self) -> int:
         return len(self.dependents)
+
+    # TODO: Remove 'dict' method when possible
+    def missing_values(self, mode: Literal['object', 'dict']) -> int:
+        # If it doesn't exist we're the baseline, so insert "fake" 0
+        if mode == 'dict':
+            missing_values_error: MissingValues = next((error['missing_values'] for error in self.errors if isinstance(error, dict) and 'missing_values' in error), MissingValues(0))
+        elif mode == 'object':
+            missing_values_error = next((error for error in self.errors if isinstance(error, MissingValues)), MissingValues(0))
+        return missing_values_error.missing_values
 
 
 @dataclass_json

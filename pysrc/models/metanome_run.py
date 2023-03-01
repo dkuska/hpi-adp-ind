@@ -184,7 +184,7 @@ class MetanomeRunBatch(DataclassJson):
             for ind in run.results.inds:
                 clean_ind = ind_map[(str(ind.dependents), str(ind.referenced))]
                 # if clean_ind not in inds: inds[clean_ind] = []
-                inds[clean_ind].append((next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error), run))
+                inds[clean_ind].append((ind.missing_values('dict'), run))
         # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
         baseline = self.baseline
         inds_credibilities = {
@@ -380,11 +380,11 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
         if baseline.has_ind(ind):
             ind.errors.append(INDType('TP'))
             tp += 1
-            sum_tp_missing_values += next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error)
+            sum_tp_missing_values += ind.missing_values('dict')
         else:
             ind.errors.append(INDType('FP'))
             fp += 1
-            sum_fp_missing_values += next(error['missing_values'] for error in ind.errors if isinstance(error, dict) and 'missing_values' in error)
+            sum_fp_missing_values += ind.missing_values('dict')
 
     fn = len(baseline.inds) - tp
 
