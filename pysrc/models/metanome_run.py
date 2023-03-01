@@ -7,10 +7,9 @@ from dataclasses import dataclass
 from dataclasses_json import dataclass_json
 import statistics
 from typing import Iterator
-from pysrc.errors import tuples_to_remove
 
 from pysrc.models.column_information import ColumnInformation
-from pysrc.models.errors import ErrorMetric, INDType, TuplesToRemove, MissingValues
+from pysrc.models.errors import ErrorMetric, INDType, MissingValues
 from pysrc.models.ind import IND
 from pysrc.models.column_statistics import ColumnStatistic
 from pysrc.utils.dataclass_json import DataclassJson
@@ -131,39 +130,6 @@ class MetanomeRunBatch(DataclassJson):
     @property
     def baseline(self) -> MetanomeRun:
         return next(run for run in self.runs if run.configuration.is_baseline)
-
-    def tuples_to_remove(self) -> dict[MetanomeRun, tuple[float, float, float, float]]:
-        """Returns the average number (absolute & relative) of rows (total & unique) to remove such that false positive INDs become real
-        The form of a dict entry is (absolute_total, relative_total, absolute_distinct, relative_distinct)"""
-        baseline = self.baseline
-        results: dict[MetanomeRun, tuple[float, float, float, float]] = {}
-        for run in self.runs:
-            tuples_to_remove.tuples_to_remove(baseline_config=baseline.configuration, experiment=run)
-            run_results: dict[IND, list[ErrorMetric]] = {ind: ind.errors for ind in run.results.inds}
-            tuples_to_remove_errors: list[TuplesToRemove] = [
-                error
-                for sublist
-                in run_results.values()
-                for error
-                in sublist
-                if isinstance(error, TuplesToRemove)
-            ]
-            # Return 0 for every metric if there are no INDs
-            if len(tuples_to_remove_errors) == 0:
-                results[run] = (0, 0, 0, 0)
-                continue
-            # Consider whether a mean is appropriate here (also consider sum or other metrics)
-            # Also consider that unique tuples to be removed may overlap between INDs.
-            # However, it might get expensive to keep all unique tuples in memory and check every entry against it.
-            avg_abs_total = statistics.fmean([error.absolute_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_rel_total = statistics.fmean([error.relative_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_abs_uniq = statistics.fmean(
-                [error.absolute_distinct_tuples_to_remove for error in tuples_to_remove_errors])
-            avg_rel_uniq = statistics.fmean(
-                [error.relative_distinct_tuples_to_remove for error in tuples_to_remove_errors])
-            results[run] = (avg_abs_total, avg_rel_total, avg_abs_uniq, avg_rel_uniq)
-        return results
-
 
     def ranked_inds(self) -> dict[IND, float]:
         # Collect INDs

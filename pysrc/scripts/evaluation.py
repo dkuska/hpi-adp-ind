@@ -131,35 +131,6 @@ def make_plots(output_file: str) -> list[str]:
     return plot_paths
 
 
-def collect_error_metrics(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str) -> str:
-    if mode == 'interactive':
-        print('Error metrics collection is (temporarily) disabled for performance reasons')
-    return ''
-    tuples_to_remove = experiments.tuples_to_remove()
-    if mode == 'interactive':
-        print('### Tuples To Remove ###')
-        print('When looking into the shown file combinations, on average that many tuples have to be removed to make all found INDs TPs.')
-        print('The data is presented as (absolute number of tuples to be removed, relative percentage of tuples to be removed, absolute number of distinct tuples to be removed, relative percentage of distinct tuples to be removed).')
-        print({
-            tuple([
-                file.rsplit('/', 1)[1]
-                for file
-                in run.configuration.source_files
-            ]): error
-            for run, error
-            in tuples_to_remove.items()
-            if error[0] + error[1] > 0.0
-        })
-    # Always print results in detail to a file
-    output_path = os.path.join(os.getcwd(), output_folder)
-    output_json = f'{output_path}{os.sep}errors.json'
-    with open(output_json, 'w', encoding='utf-8') as json_file:
-        json.dump(experiments, json_file,
-                 ensure_ascii=False, indent=4, cls=EnhancedJSONEncoder)
-
-    return output_json
-
-
 def collect_ind_ranking(experiments: MetanomeRunBatch, mode: Literal['interactive', 'file'], output_folder: str, top_inds: int) -> str:
     ranked_inds = experiments.ranked_inds()
     baseline = experiments.baseline
@@ -213,7 +184,7 @@ def evaluate_ind_rankings(ranked_inds_path: str, maximum_threshold_percentage: f
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=str, required=False, default=None, help='The JSON file containing the experiment information to be evaluated')
-    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), of the error metrics (`error`), or of the ranked inds (`ranked`)')
+    parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the ranked inds (`ranked`)')
     parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
     parser.add_argument('--top-inds', type=int, default=-1, help='The number of INDs (from the top ranking) that should be shown. A negative number shows all.')
     GlobalConfiguration.argparse_arguments(parser)
@@ -230,7 +201,8 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
     csv_path = create_evaluation_csv(experiments, output_sub_directory)
     if config.create_plots:
         plot_paths = make_plots(output_sub_directory)
-    error_path = collect_error_metrics(experiments, 'interactive' if interactive else 'file', output_sub_directory)
+    else:
+        plot_paths = []
     ranked_inds_path = collect_ind_ranking(experiments, 'interactive' if interactive else 'file', output_sub_directory, top_inds)
     if interactive:
         thresholds = [1.0, 0.995, 0.99, 0.95, 0.9, 0.8, 0.7, 0.6, 0.5, 0.45, 0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.01, 0.005, 0.001, 0.0]
@@ -241,8 +213,6 @@ def run_evaluation(config: GlobalConfiguration, file: str, interactive: bool, re
             return csv_path
         case 'plot':
             return ', '.join(plot_paths)
-        case 'error':
-            return error_path
         case 'ranked':
             return ranked_inds_path
         case _:

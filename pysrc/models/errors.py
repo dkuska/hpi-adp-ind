@@ -12,15 +12,6 @@ class ErrorMetric(ABC, DataclassJson):
 
 @dataclass_json
 @dataclass(frozen=True)
-class TuplesToRemove(ErrorMetric):
-    absolute_tuples_to_remove: int
-    relative_tuples_to_remove: float
-    absolute_distinct_tuples_to_remove: int
-    relative_distinct_tuples_to_remove: float
-
-
-@dataclass_json
-@dataclass(frozen=True)
 class INDType(ErrorMetric):
     ind_type: Literal['TP', 'FP']
 
