@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import itertools
 import math
 import os
+from typing import Generator
 import uuid
 import pandas as pd
 import numpy as np
@@ -353,13 +354,14 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     return create_result_json(dataset, experiment_batch, config)
 
 
-def run_dataset_experiments(config: GlobalConfiguration) -> list[str]:
-    """Run experiments for each dataset in the source folder"""
-    return [
+def run_dataset_experiments(config: GlobalConfiguration) -> Generator[str, None, None]:
+    """Run experiments for each dataset in the source folder.
+    Returns a generator that emits json files with the results for each dataset."""
+    return (
         run_experiments(dataset, config)
         for dataset
         in os.listdir(os.path.join(os.getcwd(), config.source_dir))
-    ]
+    )
 
 
 def parse_args() -> argparse.Namespace:
