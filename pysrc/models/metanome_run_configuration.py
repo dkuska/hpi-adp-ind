@@ -37,8 +37,7 @@ class MetanomeRunConfiguration(DataclassJson):
 
     def credibility(self) -> float:
         """Get the credibility (i.e. how trustworthy this config is) of the config."""
-        # TODO: Actually depend this on the config data
-        # return float(product([budget for budget in self.total_budget]))
+        # TODO: Actually depend this on the config data (like sampling method)
         if self.total_budget is None:
             raise ValueError(self.total_budget)
         return self.total_budget
