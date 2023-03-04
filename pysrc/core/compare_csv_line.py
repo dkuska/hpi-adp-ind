@@ -1,10 +1,39 @@
+from dataclasses import astuple, dataclass
 from pysrc.models.errors import INDType
 from pysrc.models.ind import IND
 from pysrc.models.metanome_run import MetanomeRun
 from pysrc.models.metanome_run_results import MetanomeRunResults
 
 
-def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
+@dataclass(frozen=True)
+class LineComparisonResultUnary:
+    tp: int
+    fp: int
+    fn: int
+    precision: float
+    recall: float
+    f1: float
+    mean_tp_missing_values: float
+    mean_fp_missing_values: float
+    
+    def unpack(self) -> tuple[int, int, int, float, float, float, float, float]:
+        return self.tp, self.fp, self.fn, self.precision, self.recall, self.f1, self.mean_tp_missing_values, self.mean_fp_missing_values
+
+
+@dataclass(frozen=True)
+class LineComparisonResultNary:
+    tp: list[int]
+    fp: list[int]
+    fn: list[int]
+    precision: list[float]
+    recall: list[float]
+    f1: list[float]
+    
+    def unpack(self) -> tuple[list[int], list[int], list[int], list[float], list[float], list[float]]:
+        return self.tp, self.fp, self.fn, self.precision, self.recall, self.f1
+
+
+def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults) -> LineComparisonResultUnary:
     """For unary INDs, this method returns absolute counts for TP, FP, FN, etc."""
     tp, fp = 0, 0
     sum_tp_missing_values, sum_fp_missing_values = 0, 0
@@ -22,19 +51,20 @@ def compare_csv_line_unary(inds: list[IND], baseline: MetanomeRunResults):
 
     fn = len(baseline.inds) - tp
 
+    nan = float('nan')
     if num_inds > 0:
-        precision = tp / (tp + fp) if tp + fp != 0 else float('nan')
-        recall = tp / (tp + fn) if tp + fn != 0 else float('nan')
-        f1 = 2 * (precision * recall) / (precision + recall) if recall + precision != 0 else float('nan')
-        mean_tp_missing_values = sum_tp_missing_values / tp if tp > 0 else float('nan')
-        mean_fp_missing_values = sum_fp_missing_values / fp if fp > 0 else float('nan')
+        precision = tp / (tp + fp) if tp + fp != 0 else nan
+        recall = tp / (tp + fn) if tp + fn != 0 else nan
+        f1 = 2 * (precision * recall) / (precision + recall) if recall + precision != 0 else nan
+        mean_tp_missing_values = sum_tp_missing_values / tp if tp > 0 else nan
+        mean_fp_missing_values = sum_fp_missing_values / fp if fp > 0 else nan
     else:
-        precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = 0, 0, 0, 0, 0
+        precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = 0.0, 0.0, 0.0, 0.0, 0.0
 
-    return tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values
+    return LineComparisonResultUnary(tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values)
 
 
-def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
+def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults) -> LineComparisonResultNary:
     """For nary INDs, this returns lists with counts for each arity"""
     max_arity = max([ind.arity() for ind in baseline.inds])
 
@@ -68,7 +98,7 @@ def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults):
         else:
             f1[i] = float('nan')
 
-    return tp, fp, fn, precision, recall, f1
+    return LineComparisonResultNary(tp, fp, fn, precision, recall, f1)
 
 
 def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> list[str]:
@@ -98,11 +128,11 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         budgets.append(budget)
 
     if run.configuration.arity == 'unary':
-        tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = compare_csv_line_unary(run.results.inds, baseline)
+        tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = compare_csv_line_unary(run.results.inds, baseline).unpack()
         return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}', f'{mean_tp_missing_values:.3f}', f'{mean_fp_missing_values:.3f}']
 
     else:
-        tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline)
+        tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline).unpack()
 
         return ['; '.join(file_names),
                 '; '.join(methods),\
