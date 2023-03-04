@@ -13,13 +13,6 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     referenced_stat = referenced_stats[0]
     baseline_dependents_stat = baseline_dependents_stats[0]
     baseline_referenced_stat = baseline_referenced_stats[0]
-    # Calculate (possibly) relevant stats
-    sampling_ratio_dependent = baseline_dependents_stat.unique_count / dependents_stat.unique_count
-    sampling_ratio_referenced = baseline_referenced_stat.unique_count / referenced_stat.unique_count
-    ratio_of_sample_sizes = dependents_stat.unique_count / referenced_stat.unique_count
-    ratio_of_cardinality = baseline_dependents_stat.unique_count / baseline_referenced_stat.unique_count
-    missing_ratio = missing_values / dependents_stat.unique_count
-    useless_ratio = missing_values / referenced_stat.unique_count
     # Check plausibility
     nan = float('nan')
     if baseline_dependents_stat.unique_count > baseline_referenced_stat.unique_count:

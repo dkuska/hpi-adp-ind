@@ -72,7 +72,7 @@ class GlobalConfiguration:
         )
         
     @staticmethod
-    def argparse_arguments(parser: ArgumentParser) -> None:
+    def argparse_arguments(parser: ArgumentParser) -> ArgumentParser:
         """Modifies the provided argparse parser by adding optional arguments for all config options"""
         parser.add_argument('--algorithm', type=str, required=False, default=['BINDER', 'PartialSPIDER'][1], help='Which algorithm to use, either PartialSPIDER or BINDER')
         parser.add_argument('--arity', type=str, required=False, default=['unary', 'nary'][0], help='Whether to find `unary` or `nary` INDs')
@@ -88,3 +88,4 @@ class GlobalConfiguration:
         parser.add_argument('--output-folder', type=str, required=False, default='output/', help='The directory containing result files after the program terminates')
         parser.add_argument('--result-name', type=str, required=False, default=None, help='The name of the run. Used to generate the output folder. Depends on the current time by default.')
         parser.add_argument('--pipe', action=BooleanOptionalAction, required=False, default=False, help='Whether to allow piping the output directly to the evaluation script')
+        return parser

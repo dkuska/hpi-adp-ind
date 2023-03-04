@@ -113,7 +113,6 @@ def sample_csv(file_path: str,
             column_data = column_data[1:]
 
         # Can be removed or doesn't needed for sampling anymore
-        num_entries = len(aggregate_data_per_column[column])
         num_samples = size_per_column[column].allowed_budget
 
         # rename files column specific
@@ -121,7 +120,7 @@ def sample_csv(file_path: str,
         new_file_path = os.path.join(os.getcwd(), config.tmp_folder, new_file_name)
 
         sampling_method_function = sampling_methods_dict[sampling_method]
-        sampled_data = sampling_method_function(column_data, num_samples, num_entries)
+        sampled_data = sampling_method_function(column_data, num_samples)
 
         with open(new_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')

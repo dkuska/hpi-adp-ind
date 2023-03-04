@@ -1,4 +1,4 @@
-from typing import Generic, Type, TypeVar, Union, overload
+from typing import Generic, Type, TypeVar, Union
 
 
 JsonData = Union[str, bytes, bytearray]
