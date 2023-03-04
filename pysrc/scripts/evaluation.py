@@ -6,14 +6,16 @@ import sys
 from typing import Literal, Optional
 
 import pandas as pd
+from pysrc.core.compare_csv_line import run_as_compared_csv_line
+
+from pysrc.models.metanome_run_batch import MetanomeRunBatch
 from ..models.ind import RankedIND
 
 from ..utils.enhanced_json_encoder import (EnhancedJSONDecoder,
                                            EnhancedJSONEncoder)
 
 from ..configuration import GlobalConfiguration
-from ..models.metanome_run import (MetanomeRun, MetanomeRunBatch,
-                                   run_as_compared_csv_line)
+from ..models.metanome_run import MetanomeRun
 from ..utils.plots import (create_TpFpFn_stacked_barplot_by_method, create_plot, plot_missing_values)
 
 

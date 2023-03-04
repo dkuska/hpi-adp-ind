@@ -31,7 +31,7 @@ class IND(DataclassJson):
     def missing_values(self, mode: Literal['object', 'dict']) -> int:
         # If it doesn't exist we're the baseline, so insert "fake" 0
         if mode == 'dict':
-            missing_values_error: MissingValues = next((error['missing_values'] for error in self.errors if isinstance(error, dict) and 'missing_values' in error), MissingValues(0))
+            missing_values_error: MissingValues = next((MissingValues(error['missing_values']) for error in self.errors if isinstance(error, dict) and 'missing_values' in error), MissingValues(0))
         elif mode == 'object':
             missing_values_error = next((error for error in self.errors if isinstance(error, MissingValues)), MissingValues(0))
         return missing_values_error.missing_values

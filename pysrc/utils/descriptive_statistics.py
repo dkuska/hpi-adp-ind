@@ -18,12 +18,12 @@ def file_column_statistics(file_path: str, *, header: bool, delimiter: str =';',
         count = column_series.count()
         unique_count = column_series.nunique()
         min = column_series.iloc[0]
-        max = column_series.iloc[-1]
+        max = column_series.iloc[count-1]
         
         column_series.index = column_series.str.len() # type: ignore
         column_series.sort_index(inplace=True)
         shortest = column_series.iloc[0]
-        longest = column_series.iloc[-1]
+        longest = column_series.iloc[count-1]
         
         file_name = file_path.rsplit('/', 1)[-1].rsplit('.', 1)[0]
         table_name = file_name.rsplit('__', 1)[0]
