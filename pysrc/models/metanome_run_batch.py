@@ -21,6 +21,7 @@ class MetanomeRunBatch(DataclassJson):
 
     @property
     def baseline(self) -> MetanomeRun:
+        # TODO: Check whether only doing this once and storing the result would be worth it.
         return next(run for run in self.runs if run.configuration.is_baseline)
 
     def ranked_inds(self) -> dict[IND, float]:
@@ -36,14 +37,11 @@ class MetanomeRunBatch(DataclassJson):
 
         for run in self.runs:
             # Skip baseline (it won't be available in production)
-            # TODO: Is this correct behavior? Not sure, but otherwise we'll get *every* TP IND as we're checking the baseline.
             if run.configuration.is_baseline:
                 continue
             for ind in run.results.inds:
                 clean_ind = ind_map[(str(ind.dependents), str(ind.referenced))]
-                # if clean_ind not in inds: inds[clean_ind] = []
                 inds[clean_ind].append((ind.missing_values('dict'), run))
-        # maximum_missing_values = max(missing_values for configMissingValuePairs in inds.values() for missing_values, _ in configMissingValuePairs)
         baseline = self.baseline
         inds_credibilities = {
                 ind: [
