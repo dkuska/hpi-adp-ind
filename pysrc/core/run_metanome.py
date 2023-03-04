@@ -65,7 +65,6 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
                            algorithm=configuration.algorithm,
                            arity=configuration.arity,
                            results_folder=configuration.results_folder,
-                           print_inds=configuration.print_inds,
                            is_baseline=configuration.is_baseline,
                            header=configuration.header)
     return MetanomeRun(configuration=configuration, column_statistics=source_files_column_statistics, results=result)
