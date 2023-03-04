@@ -10,7 +10,8 @@ from pysrc.utils.dataclass_json import DataclassJson
 @dataclass_json
 @dataclass(frozen=True)
 class IND(DataclassJson):
-    """Represents a single, nary ind"""
+    """Represents a single, nary ind.
+    For unary INDs, exactly one element is present in `dependents` and `referenced`."""
     dependents: list[ColumnInformation]
 
     referenced: list[ColumnInformation]
@@ -23,11 +24,11 @@ class IND(DataclassJson):
     def __hash__(self) -> int:
         return hash((tuple(self.dependents), tuple(self.referenced)))
     
-    
     def arity(self) -> int:
         return len(self.dependents)
 
     # TODO: Remove 'dict' method when possible
+    # Requires proper deserialization in the evaluation phase
     def missing_values(self, mode: Literal['object', 'dict']) -> int:
         # If it doesn't exist we're the baseline, so insert "fake" 0
         if mode == 'dict':
