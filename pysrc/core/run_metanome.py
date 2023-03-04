@@ -11,6 +11,8 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
         algorithm_path = 'BINDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.binder.BINDERFile'
     elif configuration.algorithm == 'PartialSPIDER':
+        if configuration.arity == 'nary':
+            raise ValueError('SPIDER does not support n-ary INDs')
         algorithm_path = 'PartialSPIDER.jar'
         algorithm_class_name = 'de.metanome.algorithms.spider.SPIDERFile'
     else:
@@ -20,12 +22,13 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     separator = '\\;'
     escape = '\\\\'
     output_rule = f'file:{output_fname}'
-    allowed_gb: int = 6
+    allowed_gb = 6
 
     # Calculate File Statistics
     source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, header=configuration.header, is_baseline=configuration.is_baseline)]
 
     # Construct Command
+    # TODO: Beware that this might allow unsanitized code to be appended to the command.
     file_name_list = ' '.join([f'"{file_name}"' for file_name in configuration.source_files])
 
     execute_str = f'java -Xmx{allowed_gb}g -cp {metanome_cli_path}:{algorithm_path} de.metanome.cli.App \
