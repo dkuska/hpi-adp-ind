@@ -5,6 +5,7 @@ from dataclasses_json import dataclass_json
 
 from pysrc.utils.dataclass_json import DataclassJson
 
+
 @dataclass_json
 class ErrorMetric(ABC, DataclassJson):
     pass

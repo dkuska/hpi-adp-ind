@@ -1,4 +1,4 @@
-from dataclasses import astuple, dataclass
+from dataclasses import dataclass
 import os
 from pysrc.models.errors import INDType
 from pysrc.models.ind import IND
@@ -18,7 +18,8 @@ class LineComparisonResultUnary:
     mean_fp_missing_values: float
     
     def unpack(self) -> tuple[int, int, int, float, float, float, float, float]:
-        return self.tp, self.fp, self.fn, self.precision, self.recall, self.f1, self.mean_tp_missing_values, self.mean_fp_missing_values
+        return self.tp, self.fp, self.fn, self.precision, self.recall,\
+            self.f1, self.mean_tp_missing_values, self.mean_fp_missing_values
 
 
 @dataclass(frozen=True)
@@ -134,7 +135,8 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
         budgets.append(budget)
 
     if run.configuration.arity == 'unary':
-        tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = compare_csv_line_unary(run.results.inds, baseline).unpack()
+        tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values =\
+            compare_csv_line_unary(run.results.inds, baseline).unpack()
         return ['; '.join(file_names),
                 '; '.join(methods), 
                 '; '.join(budgets), 

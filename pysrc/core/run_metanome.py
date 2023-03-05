@@ -25,7 +25,10 @@ def run_metanome(configuration: MetanomeRunConfiguration, output_fname: str, pip
     allowed_gb = 6
 
     # Calculate File Statistics
-    source_files_column_statistics = [stats for f in configuration.source_files for stats in file_column_statistics(f, header=configuration.header, is_baseline=configuration.is_baseline)]
+    source_files_column_statistics = [stats for f in configuration.source_files
+                                      for stats
+                                      in file_column_statistics(f, header=configuration.header,
+                                                                is_baseline=configuration.is_baseline)]
 
     # Construct Command
     # TODO: Beware that this might allow unsanitized code to be appended to the command.

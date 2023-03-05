@@ -5,6 +5,7 @@ from pysrc.utils.dataclass_json import DataclassJson
 
 from .column_information import ColumnInformation
 
+
 @dataclass_json
 @dataclass(frozen=True)
 class ColumnStatistic(DataclassJson):

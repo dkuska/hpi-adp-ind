@@ -58,5 +58,7 @@ class MetanomeRunBatch(DataclassJson):
             # When this IND was not found in the runs, set -2.
             inds_credibilities[ind] = [-2.0]
         # Rank INDs by SUM over ALL runs (with value 0.0 for runs that didn't find the IND)
-        ranked_inds = { ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0 for ind, credibilities in inds_credibilities.items() }
+        ranked_inds = {ind: credibility_sum if not isnan(credibility_sum := sum(credibilities)) else -1.0
+                       for ind, credibilities
+                       in inds_credibilities.items()}
         return ranked_inds

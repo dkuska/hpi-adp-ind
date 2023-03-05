@@ -22,13 +22,15 @@ from ..utils.sampling_methods import sampling_methods_dict
 
 from ..utils.descriptive_statistics import file_column_statistics
 
+
 @dataclass(frozen=False)
 class ColumnBudgetInfo:
     allowed_budget: int
     full_column_fits_in_budget: bool
 
 
-def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int, basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
+def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int,
+                  basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
 
     # Amount  of columns that have not their final budget so far
     count_columns_not_full = sum(
@@ -81,6 +83,7 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
     return assign_budget(size_per_column, budget_to_share, basic_size + budget_per_column, count_columns_not_full)
 
 
+
 def sample_csv(file_path: str,
                sampling_method: str,
                budget: int,
@@ -99,7 +102,9 @@ def sample_csv(file_path: str,
 
     # Read input file into dataframe and cast all columns into strings
 
-    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str', header=None) if is_non_zero_file(file_path) else pd.DataFrame(dtype='str')
+    source_df = pd.read_csv(file_path, delimiter=';', escapechar='\\', dtype='str', header=None)\
+        if is_non_zero_file(file_path)\
+        else pd.DataFrame(dtype='str')
 
     # Cast each column into a list
     for column_index, column in enumerate(source_df.columns):
@@ -108,6 +113,7 @@ def sample_csv(file_path: str,
     for column in aggregate_data_per_column:
         column_data = aggregate_data_per_column[column]
 
+        file_header = None
         if config.header:
             file_header = column_data[0]
             column_data = column_data[1:]
@@ -125,11 +131,12 @@ def sample_csv(file_path: str,
         with open(new_file_path, 'w') as file:
             writer = csv.writer(file, delimiter=';', escapechar='\\')
             if config.header:
-                writer.writerow([file_header]) # pyright: ignore [reportUnboundVariable]
+                writer.writerow([file_header])
 
             empty_str = ''
             for row_index in range(0, len(sampled_data)):
-                # TODO: Create Testcases to check if this always works should avoid writing empty lines into the sampled data
+                # TODO: Create Testcases to check if this always works
+                # should avoid writing empty lines into the sampled data
                 if sampled_data.iloc[row_index] == empty_str:
                     continue
                 writer.writerow([sampled_data.iloc[row_index]])
@@ -186,7 +193,9 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     column_statistics = [file_column_statistics(file_path, header=config.header) for file_path in source_files]
 
     # find the largest unique count of a column
-    largest_unique_count = max(column_statistic.unique_count for column_statistics_in_file in column_statistics for column_statistic in column_statistics_in_file)
+    largest_unique_count = max(column_statistic.unique_count for column_statistics_in_file in column_statistics
+                               for column_statistic
+                               in column_statistics_in_file)
     allowed_missing_values = math.ceil(0.5*largest_unique_count)
 
     configurations: list[MetanomeRunConfiguration] = []
@@ -233,13 +242,15 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
                     # Checks if the basic size is enough to represent all unique values
                     # if it's not enough write the required size into the ColumnBudgetInfo
                     if column_description.unique_count > basic_size:
-                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, False))
+                        size_per_column[file_index].insert(column_index,
+                                                           ColumnBudgetInfo(column_description.unique_count, False))
 
                     # this case the basic budget is enough for all uniques then write the unique count ColumnBudgetInfo
                     # and set True to indicate that no further budget adaptions are required
                     # Calculate the Budget that isn't required and give the amount back to a budget pool
                     else:
-                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, True))
+                        size_per_column[file_index].insert(column_index,
+                                                           ColumnBudgetInfo(column_description.unique_count, True))
                         budget_to_share += basic_size - column_description.unique_count
             # After the initial budget per columns it's necessary to split the pool of budget that wasn't required by some
             # columns and split it evenly to the columns that need more budget

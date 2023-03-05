@@ -3,6 +3,7 @@ from dataclasses_json import dataclass_json
 
 from pysrc.utils.dataclass_json import DataclassJson
 
+
 @dataclass_json
 @dataclass(frozen=True)
 class ColumnInformation(DataclassJson):

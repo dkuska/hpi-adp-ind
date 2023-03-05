@@ -3,11 +3,22 @@ from pysrc.utils.eprint import eprint
 from ..models import metanome_run
 
 
-def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int, baseline: 'metanome_run.MetanomeRun') -> float:
-    dependents_stats = [next(stat for stat in run.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
-    referenced_stats = [next(stat for stat in run.column_statistics if stat.column_information == referenced) for referenced in ind.referenced]
-    baseline_dependents_stats = [next(stat for stat in baseline.column_statistics if stat.column_information == dependent) for dependent in ind.dependents]
-    baseline_referenced_stats = [next(stat for stat in baseline.column_statistics if stat.column_information == referenced) for referenced in ind.referenced]
+def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: int,
+                    baseline: 'metanome_run.MetanomeRun') -> float:
+    dependents_stats = [next(stat for stat in run.column_statistics if stat.column_information == dependent)
+                        for dependent
+                        in ind.dependents]
+    referenced_stats = [next(stat for stat in run.column_statistics if stat.column_information == referenced)
+                        for referenced
+                        in ind.referenced]
+    baseline_dependents_stats = [next(stat for stat in baseline.column_statistics
+                                      if stat.column_information == dependent)
+                                 for dependent
+                                 in ind.dependents]
+    baseline_referenced_stats = [next(stat for stat in baseline.column_statistics
+                                      if stat.column_information == referenced)
+                                 for referenced
+                                 in ind.referenced]
     # Only consider unary INDs
     dependents_stat = dependents_stats[0]
     referenced_stat = referenced_stats[0]
@@ -18,7 +29,8 @@ def ind_credibility(ind: IND, run: 'metanome_run.MetanomeRun', missing_values: i
     if baseline_dependents_stat.unique_count > baseline_referenced_stat.unique_count:
         # There are more dependent values than referenced ones
         return nan
-    if baseline_dependents_stat.min < baseline_referenced_stat.min or baseline_dependents_stat.max > baseline_referenced_stat.max:
+    if baseline_dependents_stat.min < baseline_referenced_stat.min or \
+            baseline_dependents_stat.max > baseline_referenced_stat.max:
         # Minimum of dependent is smaller than minimum of referenced (or analogue with maximum)
         return nan
     if missing_values > baseline_referenced_stat.unique_count - referenced_stat.unique_count:

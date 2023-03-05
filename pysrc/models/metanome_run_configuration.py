@@ -30,7 +30,8 @@ class MetanomeRunConfiguration(DataclassJson):
     is_baseline: bool
 
     def __hash__(self) -> int:
-        return hash((self.algorithm, self.arity, self.total_budget, self.sampling_method, self.allowed_missing_values, self.time, self.source_dir,
+        return hash((self.algorithm, self.arity, self.total_budget, self.sampling_method,
+                     self.allowed_missing_values, self.time, self.source_dir,
                      tuple(self.source_files), self.tmp_folder, self.results_folder,
                      self.result_suffix, self.output_folder, self.clip_output, self.header,
                      self.print_inds, self.create_plots, self.is_baseline))

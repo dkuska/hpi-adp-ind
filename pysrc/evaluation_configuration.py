@@ -1,10 +1,7 @@
-from argparse import ArgumentParser, BooleanOptionalAction
+from argparse import ArgumentParser
 import argparse
 from dataclasses import dataclass
-import datetime
 from typing import Any, Optional, Type, TypeVar
-
-from dateutil import parser as datetime_parser
 
 
 @dataclass(frozen=True)
@@ -17,7 +14,8 @@ class EvaluationConfiguration:
     T = TypeVar('T')
 
     @staticmethod
-    def _construct_from_dict(args: dict[str, Any], key: str, required_type: Type[T], may_be_none: bool = False, default: Optional[T] = None) -> T:
+    def _construct_from_dict(args: dict[str, Any], key: str, required_type: Type[T],
+                             may_be_none: bool = False, default: Optional[T] = None) -> T:
         if key not in args:
             if default is not None or may_be_none:
                 return default
@@ -27,7 +25,6 @@ class EvaluationConfiguration:
                 return default
             raise TypeError(f'Required type for {key=}: {required_type}. Got type {type(args[key])}.')
         return args[key]
-
 
     @classmethod
     def default(cls, args: dict[str, Any]) -> 'EvaluationConfiguration':
@@ -45,8 +42,12 @@ class EvaluationConfiguration:
     @staticmethod
     def argparse_arguments(parser: ArgumentParser) -> ArgumentParser:
         """Modifies the provided argparse parser by adding optional arguments for evaluation config options"""
-        parser.add_argument('--file', type=str, required=False, default=None, help='The JSON file containing the experiment information to be evaluated. Mutually exclusive to `--pipe`.')
-        parser.add_argument('--return-path', type=str, required=False, default=None, help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the ranked inds (`ranked`)')
-        parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False, help='Whether to print the error metrics in a human-readable way')
-        parser.add_argument('--top-inds', type=int, default=-1, help='The number of INDs (from the top ranking) that should be shown. A negative number shows all.')
+        parser.add_argument('--file', type=str, required=False, default=None,
+                            help='The JSON file containing the experiment information to be evaluated. Mutually exclusive to `--pipe`.')
+        parser.add_argument('--return-path', type=str, required=False, default=None,
+                            help='Whether to return no path (default), the path of the created csv file (`csv`), of the plot (`plot`), or of the ranked inds (`ranked`)')
+        parser.add_argument('--interactive', action=argparse.BooleanOptionalAction, required=False, default=False,
+                            help='Whether to print the error metrics in a human-readable way')
+        parser.add_argument('--top-inds', type=int, default=-1,
+                            help='The number of INDs (from the top ranking) that should be shown. A negative number shows all.')
         return parser
