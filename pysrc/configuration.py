@@ -46,7 +46,7 @@ class GlobalConfiguration:
 
 
     @classmethod
-    def default(cls, args: dict[str, Any]):
+    def default(cls, args: dict[str, Any]) -> 'GlobalConfiguration':
         algorithm = cls._construct_from_dict(args, 'algorithm', str)
         arity = cls._construct_from_dict(args, 'arity', str)
         now = cls._construct_from_dict(args, 'now', datetime.datetime)

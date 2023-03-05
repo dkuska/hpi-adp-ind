@@ -1,4 +1,5 @@
 from dataclasses import astuple, dataclass
+import os
 from pysrc.models.errors import INDType
 from pysrc.models.ind import IND
 from pysrc.models.metanome_run import MetanomeRun
@@ -103,13 +104,18 @@ def compare_csv_line_nary(inds: list[IND], baseline: MetanomeRunResults) -> Line
 
 def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> list[str]:
     sampled_file_paths = run.configuration.source_files
-    sampled_file_names = [path.rsplit('/', 1)[-1].replace('.csv', '') for path in sampled_file_paths]
+    sampled_file_names = [path.rsplit(os.sep, 1)[-1].replace('.csv', '') for path in sampled_file_paths]
 
+    file_names: list[str]
+    methods: list[str]
+    budgets: list[str]
     file_names, methods, budgets = [], [], []
     for sampled_file in sampled_file_names:
+        # TODO: Inspect how much code here is unnecessary (we only have column sampling)
+        # TODO: Document this code. What do all these indices mean?
         split_filename = sampled_file.split(
             '__')  # Detect Column Sampling, as this is evident from the '__' in the file
-        split_metadata = []
+        split_metadata: list[str] = []
         if len(split_filename) == 2:
             split_metadata = split_filename[1].split('_')
         split_filename = [split_filename[0]]
@@ -119,7 +125,7 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
             split_filename.append(split_metadata[1])
         if len(split_filename) == 3:
             fname, budget, sampling_method = split_filename
-            fname = fname + '_' + split_metadata[2]
+            fname = f'{fname}_{split_metadata[2]}'
         else:
             fname, budget, sampling_method = sampled_file, str(float('inf')), 'None'
 
@@ -129,17 +135,27 @@ def run_as_compared_csv_line(run: MetanomeRun, baseline: MetanomeRunResults) -> 
 
     if run.configuration.arity == 'unary':
         tp, fp, fn, precision, recall, f1, mean_tp_missing_values, mean_fp_missing_values = compare_csv_line_unary(run.results.inds, baseline).unpack()
-        return ['; '.join(file_names), '; '.join(methods), '; '.join(budgets), str(tp), str(fp), str(fn), f'{precision:.3f}', f'{recall:.3f}', f'{f1:.3f}', f'{mean_tp_missing_values:.3f}', f'{mean_fp_missing_values:.3f}']
+        return ['; '.join(file_names),
+                '; '.join(methods), 
+                '; '.join(budgets), 
+                str(tp), 
+                str(fp), 
+                str(fn), 
+                f'{precision:.3f}', 
+                f'{recall:.3f}', 
+                f'{f1:.3f}', 
+                f'{mean_tp_missing_values:.3f}', 
+                f'{mean_fp_missing_values:.3f}']
 
     else:
         tp, fp, fn, precision, recall, f1 = compare_csv_line_nary(run.results.inds, baseline).unpack()
 
         return ['; '.join(file_names),
-                '; '.join(methods),\
-                '; '.join(budgets), \
-                '; '.join([str(tp_i) for tp_i in tp]), \
-                '; '.join([str(fp_i) for fp_i in fp]), \
-                '; '.join([str(fn_i) for fn_i in fn]), \
-                '; '.join([f'{precision_i:.3f}' for precision_i in precision]), \
-                '; '.join([f'{recall_i:.3f}' for recall_i in recall]), \
+                '; '.join(methods),
+                '; '.join(budgets),
+                '; '.join([str(tp_i) for tp_i in tp]),
+                '; '.join([str(fp_i) for fp_i in fp]),
+                '; '.join([str(fn_i) for fn_i in fn]),
+                '; '.join([f'{precision_i:.3f}' for precision_i in precision]),
+                '; '.join([f'{recall_i:.3f}' for recall_i in recall]),
                 '; '.join([f'{f1_i:.3f}' for f1_i in f1])]
