@@ -53,11 +53,13 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
             if not size_for_column.full_column_fits_in_budget:
                 # check if the amount of unique values fits now with the additional budget then the allowed budget parameter
                 # it doesn't fit so far but the budget of this iteration is added to the basic size for the next iteration
+                # the adding is performed in line 82
+                # decrease the budget pool by the now used budget
                 if size_for_column.allowed_budget > budget_per_column + basic_size:
                     #size_for_column.allowed_budget = budget_per_column + basic_size
                     budget_to_share -= budget_per_column
 
-                # decrease the budget pool by the now used budget
+                # all uniques fit now calculate the excess amount and give it to the pool
                 # needs no adaption because all uniques can be fitted into the budget
                 else:
                     size_for_column.full_column_fits_in_budget = True
@@ -275,7 +277,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         for budget in config.total_budget:
             new_file_list: list[tuple[str, str, int]] = []
             # Variables for the fair sampling
-            track_changes = 0
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
             # Calculates the budget per Column if all column would get the same budget
@@ -295,7 +296,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
                         budget_to_share += basic_size - column_description.unique_count
             # After the initial budget per columns it's necessary to split the pool of budget that wasn't required by some
             # columns and split it evenly to the columns that need more budget
-            size_per_column = assign_budget(size_per_column, budget_to_share, basic_size, track_changes)
+            size_per_column = assign_budget(size_per_column, budget_to_share, basic_size, 0)
 
             for i, file_path in enumerate(source_files):
                 new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
