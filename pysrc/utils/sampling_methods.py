@@ -66,7 +66,7 @@ def longest_value_sample(data: list[str],
     tmp = pd.Series(data)
     tmp = pre_process_data(tmp)
 
-    tmp.index = tmp.str.len()
+    tmp.index = tmp.str.len()  # type: ignore
     df = tmp.sort_index(ascending=False).reset_index(drop=True)
     if len(df) >= num_samples:
         return df.iloc[:num_samples]
@@ -95,7 +95,7 @@ def evenly_spaced_sample(data: list[str],
     starting_index = random.randint(0, space_width-1)
     out_indices = [i % len(tmp) for i in range(starting_index, len(tmp), space_width)]
 
-    out = tmp.iloc[out_indices]
+    out = tmp.iloc[out_indices]  # type: ignore
     return out
 
 
