@@ -41,12 +41,22 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
         if not size_for_column.full_column_fits_in_budget
     )
 
-    # exit condition no more columns that need budget adaption
-    if count_columns_not_full <= 1:
-        return size_per_column
-
     # budget that was left after the initial phase, which is now distributed between the columns that require more budget
     budget_per_column = math.floor(budget_to_share / count_columns_not_full)
+
+    # Probably not even required adds another break condition if all columns are at the final budget stage and in between
+    # two function calls no more adaptions to the budget could be made
+    if count_columns_not_full == track_changes:
+        for sizes_for_file in size_per_column:
+            for size_for_column in sizes_for_file:
+                if not size_for_column.full_column_fits_in_budget:
+                    size_for_column.allowed_budget = budget_per_column + basic_size
+        return size_per_column
+
+    # no more budget is available and can be shared between columns
+    if budget_per_column == 0:
+        return size_per_column
+
 
     for sizes_for_file in size_per_column:
         for size_for_column in sizes_for_file:
@@ -65,21 +75,9 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
                     size_for_column.full_column_fits_in_budget = True
                     budget_to_share += (budget_per_column + basic_size)-size_for_column.allowed_budget
 
-    # Probably not even required adds another break condition if all columns are at the final budget stage and in between
-    # two function calls no more adaptions to the budget could be made
-    if count_columns_not_full == track_changes:
-        for sizes_for_file in size_per_column:
-            for size_for_column in sizes_for_file:
-                if not size_for_column.full_column_fits_in_budget:
-                    size_for_column.allowed_budget = budget_per_column + basic_size
-        return size_per_column
 
-    # no more budget is available and can be shared between columns
-    if budget_per_column == 0:
-        return size_per_column
-    else:
-        # calls the function again and checks if the now left budget can be even further distributed to columns that require more budget
-        return assign_budget(size_per_column, budget_to_share, basic_size+budget_per_column, count_columns_not_full)
+    # calls the function again and checks if the now left budget can be even further distributed to columns that require more budget
+    return assign_budget(size_per_column, budget_to_share, basic_size+budget_per_column, count_columns_not_full)
 
 def sample_csv(file_path: str,
                sampling_method: str,
@@ -280,7 +278,8 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
             # Calculates the budget per Column if all column would get the same budget
-            basic_size = math.floor(budget/len(description))
+            column_count = sum(len(file) for file in description)
+            basic_size = math.floor(budget / column_count)
             for file_index, file_description in enumerate(description):
                 for column_index, column_description in enumerate(file_description):
                     # Checks if the basic size is enough to represent all unique values
