@@ -92,8 +92,13 @@ def sample_csv(source_files: list[str],
             for sam_column in sampled_data_per_column[sam_file]:
                 sampled_tuples += len(sam_column)
 
+
         if sampled_tuples >= total_budget:
             budget_left = False
+
+        sampling_method_function = sampling_methods_dict[sampling_method]
+        sampled_data = sampling_method_function(column_data, num_samples+1, num_entries)
+
 
     for file_index in range(len(source_files)):
         for column_index in range(len(sampled_data_per_column[file_index])):

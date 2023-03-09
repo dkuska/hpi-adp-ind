@@ -32,31 +32,31 @@ def first_sample(data: list[list[str]],
         return tmp.iloc[current_frame:]
 
 def smallest_value_sample(data: list[list[str]],
-                 current_frame: int,
-                 tuples_per_round: int) -> pd.Series:
+                 num_samples: int,
+                 num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
-    grouped = tmp.groupby(tmp.str.len(),  group_keys=False)
+    grouped = tmp.groupby(tmp.str.len(), group_keys=False)
 
     out = grouped.apply(lambda x: x.sort_values(ascending=True))
-    if len(out) >= current_frame+tuples_per_round:
-        return out.iloc[current_frame:current_frame+tuples_per_round]
+    if len(out) >= num_samples:
+        return out.iloc[:num_samples]
     else:
-        return out.iloc[current_frame:]
+        return out
 def biggest_value_sample(data: list[list[str]],
-                 current_frame: int,
-                 tuples_per_round: int) -> pd.Series:
+                 num_samples: int,
+                 num_entries: int) -> pd.Series:
     tmp = pd.Series(data)
     tmp = preProcessData(tmp)
 
     grouped = tmp.groupby(tmp.str.len(), group_keys=False)
 
     out = grouped.apply(lambda x: x.sort_values(ascending=False))
-    if len(out) >= current_frame+tuples_per_round:
-        return out.iloc[current_frame:current_frame+tuples_per_round]
+    if len(out) >= num_samples:
+        return out.iloc[:num_samples]
     else:
-        return out.iloc[current_frame:]
+        return out
 def longest_value_sample(data: list[list[str]],
                  current_frame: int,
                  tuples_per_round: int) -> pd.Series:
