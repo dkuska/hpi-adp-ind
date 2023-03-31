@@ -29,8 +29,9 @@ class ColumnBudgetInfo:
 def aggregate_statistic(file_path: str, header: bool) -> list[ColumnStatistic]:
     return file_column_statistics(file_path, header=header)
 
-def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int) -> list[list[ColumnBudgetInfo]]:
+def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share: int, basic_size: int, track_changes: int) -> list[list[ColumnBudgetInfo]]:
 
+    # Amount  of columns that have not their final budget so far
     count_columns_not_full = sum(
         1
         for sizes_for_file
@@ -40,17 +41,46 @@ def assign_budget(size_per_column: list[list[ColumnBudgetInfo]], budget_to_share
         if not size_for_column.full_column_fits_in_budget
     )
 
-    if count_columns_not_full == 0:
+    # budget that was left after the initial phase, which is now distributed between the columns that require more budget
+    budget_per_column = 0
+    if count_columns_not_full != 0:
+        budget_per_column = math.floor(budget_to_share / count_columns_not_full)
+
+
+
+    # Probably not even required adds another break condition if all columns are at the final budget stage and in between
+    # two function calls no more adaptions to the budget could be made
+    if count_columns_not_full == track_changes or budget_per_column == 0:
+        for sizes_for_file in size_per_column:
+            for size_for_column in sizes_for_file:
+                if not size_for_column.full_column_fits_in_budget:
+                    size_for_column.allowed_budget = budget_per_column + basic_size
         return size_per_column
 
-    budget_per_column = math.floor(budget_to_share / count_columns_not_full)
 
     for sizes_for_file in size_per_column:
         for size_for_column in sizes_for_file:
             if not size_for_column.full_column_fits_in_budget:
-                size_for_column.allowed_budget += budget_per_column
+                # check if the amount of unique values fits now with the additional budget then the allowed budget parameter
+                # it doesn't fit so far but the budget of this iteration is added to the basic size for the next iteration
+                # the adding is performed in line 82
+                # decrease the budget pool by the now used budget
+                if size_for_column.allowed_budget > budget_per_column + basic_size:
+                    #size_for_column.allowed_budget = budget_per_column + basic_size
+                    budget_to_share -= budget_per_column
 
-    return size_per_column
+                # all uniques fit now calculate the excess amount and give it to the pool
+                # needs no adaption because all uniques can be fitted into the budget
+                else:
+                    size_for_column.full_column_fits_in_budget = True
+                    budget_to_share += basic_size-size_for_column.allowed_budget
+
+
+
+
+    # calls the function again and checks if the now left budget can be even further distributed to columns that require more budget'
+    return assign_budget(size_per_column, budget_to_share, basic_size + budget_per_column, count_columns_not_full)
+
 
 def sample_csv(file_path: str,
                sampling_method: str,
@@ -197,6 +227,12 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
         if f.rsplit('.')[-1] == 'csv'
     ]
 
+    description = [aggregate_statistic(file_path, config.header) for file_path in source_files]
+
+    # find the largest unique count of a column
+    largest_unique_count = max(column_description.unique_count for file_description in description for column_description in file_description)
+    allowed_missing_values = math.ceil(0.5*largest_unique_count)
+
     configurations: list[MetanomeRunConfiguration] = []
 
     
@@ -218,6 +254,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             arity=config.arity,
             total_budget=used_budget,
             sampling_methods=used_sampling_methods,
+            allowed_missing_values=allowed_missing_values,
             time=config.now,
             source_dir=config.source_dir,
             source_files=file_combination,
@@ -232,10 +269,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             is_baseline=True,
         ))
 
-    description = [aggregate_statistic(file_path, config.header) for file_path in source_files]
-    #TODO calculate the size of the samples
-
-
     # Sampled runs
     # Sample each source file
     # Note: New approach: Group by sampling approach and budget already during sample creation
@@ -244,19 +277,38 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
     for sampling_method in config.sampling_methods:
         for budget in config.total_budget:
             new_file_list: list[tuple[str, str, int]] = []
+            # Variables for the fair sampling
             budget_to_share = 0
             size_per_column: list[list[ColumnBudgetInfo]] = [[] for _ in range(len(source_files))]
-            basic_size = math.floor(budget/len(description))
+            # Calculates the budget per Column if all column would get the same budget
+            column_count = sum(len(file) for file in description)
+
+            basic_size = math.floor(budget/column_count)
+
             for file_index, file_description in enumerate(description):
                 for column_index, column_description in enumerate(file_description):
+                    # Checks if the basic size is enough to represent all unique values
+                    # if it's not enough write the required size into the ColumnBudgetInfo
                     if column_description.unique_count > basic_size:
-                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(basic_size, False))
+                        size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, False))
 
+                    # this case the basic budget is enough for all uniques then write the unique count ColumnBudgetInfo
+                    # and set True to indicate that no further budget adaptions are required
+                    # Calculate the Budget that isn't required and give the amount back to a budget pool
                     else:
                         size_per_column[file_index].insert(column_index, ColumnBudgetInfo(column_description.unique_count, True))
                         budget_to_share += basic_size - column_description.unique_count
+            # After the initial budget per columns it's necessary to split the pool of budget that wasn't required by some
+            # columns and split it evenly to the columns that need more budget
+            size_per_column = assign_budget(size_per_column, budget_to_share, basic_size, track_changes=0)
 
-            size_per_column = assign_budget(size_per_column, budget_to_share)
+            #budget_used = sum(
+            #    size_for_column.allowed_budget
+            #    for sizes_for_file
+            #    in size_per_column
+            #    for size_for_column
+            #    in sizes_for_file)
+
 
             for i, file_path in enumerate(source_files):
                 new_file_list.extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
@@ -281,6 +333,7 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             arity=config.arity,
             total_budget=used_budget,
             sampling_methods=used_sampling_methods,
+            allowed_missing_values=allowed_missing_values,
             time=config.now,
             source_dir=config.source_dir,
             source_files=file_combination,
