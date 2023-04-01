@@ -256,14 +256,6 @@ def run_experiments(dataset: str, config: GlobalConfiguration) -> str:
             # columns and split it evenly to the columns that need more budget
             size_per_column = assign_budget(size_per_column, budget_to_share, basic_size, track_changes=0)
 
-            #budget_used = sum(
-            #    size_for_column.allowed_budget
-            #    for sizes_for_file
-            #    in size_per_column
-            #    for size_for_column
-            #    in sizes_for_file)
-
-
             for i, file_path in enumerate(source_files):
                 experiment_setup[0].extend(sample_csv(file_path, sampling_method, budget, size_per_column[i], config))
             experiment_setups.append(experiment_setup)
