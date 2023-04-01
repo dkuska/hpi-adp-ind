@@ -16,23 +16,26 @@ class SamplingMethodPlotMethod(Protocol):
 def create_plot(dataframe: pd.DataFrame, methods: list[str], plot_method: SamplingMethodPlotMethod, plot_folder: str,
                 plot_fname: str, figsize=(15, 10)) -> str:
     f: Figure
-    axiis: axes.Axes
-    f, axiis = plt.subplots(1, len(methods), figsize=figsize)
-    sns.despine(f) # Removed upper and right borders on plot
+    axiis: list[axes.Axes]
+    axiis_np: np.ndarray | axes.Axes
+    f, axiis_np = plt.subplots(1, len(methods), figsize=figsize)  # type: ignore (typngs of subplots are incorrect)
+    axiis = axiis_np.tolist() if len(methods) > 1 else [axiis_np]  # type: ignore (Way too complex for Python)
+    sns.despine(f)  # Removed upper and right borders on plot
 
-    ## If there are multiple methods, we create multiple plots side by side
+    # If there are multiple methods, we create multiple plots side by side
     if len(methods) > 1:
         for ax, method in zip(axiis, methods):
-            ax = plot_method(axes=ax, dataframe=dataframe, method=method)
+            plot_method(axes=ax, dataframe=dataframe, method=method)
     else:
-        axiis = plot_method(axes=axiis, dataframe=dataframe, method=methods[0])
+        plot_method(axes=axiis[0], dataframe=dataframe, method=methods[0])
 
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
     return plot_path
 
 
-def plot_missing_values(dataframe: pd.DataFrame, *, plot_folder: str, plot_fname: str, figsize=(15, 10)) -> str:
+def plot_missing_values(dataframe: pd.DataFrame, *, plot_folder: str, plot_fname: str,
+                        figsize: tuple[int, int] = (15, 10)) -> str:
     f: Figure
     axiis: axes.Axes
     f, axiis = plt.subplots(1, 1, figsize=figsize)
@@ -58,14 +61,13 @@ def plot_missing_values(dataframe: pd.DataFrame, *, plot_folder: str, plot_fname
 
     sns.barplot(df_missing_values, y='Config', x='Value', hue='Kind', ax=axiis, orient='h')
         
-
     plot_path = os.path.join(os.getcwd(), plot_folder, plot_fname)
     f.savefig(plot_path)
     return plot_path
 
 
-def create_PrecisionRecallF1_lineplot(axes: axes.Axes, dataframe: pd.DataFrame,
-                                      groupby_attr: str) -> axes.Axes:
+def create_precision_recall_f1_lineplot(axes: axes.Axes, dataframe: pd.DataFrame,
+                                        groupby_attr: str) -> axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
     many_plots = len(df_grouped) > 10
 
@@ -73,7 +75,7 @@ def create_PrecisionRecallF1_lineplot(axes: axes.Axes, dataframe: pd.DataFrame,
     identifiers = []
     for group_identifier, frame in df_grouped:
         identifiers.append(group_identifier)
-        #TODO: Examine if mean is the best way to plot this. Could also be done with error bars....
+        # TODO: Examine if mean is the best way to plot this. Could also be done with error bars....
         d.append([group_identifier, frame['precision'].mean(), frame['recall'].mean(), frame['f1'].mean()])
     df_grouped = pd.DataFrame(data=d, columns=[groupby_attr, 'Precision', 'Recall', 'F1-Score']).set_index(groupby_attr)
 
@@ -91,41 +93,46 @@ def create_PrecisionRecallF1_lineplot(axes: axes.Axes, dataframe: pd.DataFrame,
     return axes
 
 
-def create_TpFpFn_stacked_barplot_by_method(axes: axes.Axes, dataframe: pd.DataFrame, method: str) -> axes.Axes:
+def create_tp_fp_fn_stacked_barplot_by_method(axes: axes.Axes, dataframe: pd.DataFrame, method: str) -> axes.Axes:
     df_grouped = dataframe.groupby('sampling_method')
-    df_matching: pd.DataFrame
+    df_matching: Optional[pd.DataFrame] = None
     for sampling_method, frame in df_grouped:
         if sampling_method != method:
             continue
         df_matching = frame
         break
-    return create_TpFpFn_stacked_barplot(axes, df_matching, 'budgets', method)
+    if df_matching is None:
+        raise ValueError(f'{dataframe=} produced no grouping results of the {method=}')
+    return create_tp_fp_fn_stacked_barplot(axes, df_matching, 'budgets', method)
 
 
-def create_TpFpFn_stacked_barplot(axiis: axes.Axes, dataframe: pd.DataFrame,
-                                  groupby_attr: str, custom_title: Optional[str] = None) -> axes.Axes:
+def create_tp_fp_fn_stacked_barplot(axiis: axes.Axes, dataframe: pd.DataFrame,
+                                    groupby_attr: str, custom_title: Optional[str] = None) -> axes.Axes:
     df_grouped = dataframe.groupby(groupby_attr)
     many_plots = len(df_grouped) > 10
 
-    identifiers: list[np.generic] = []
-    d: list[list[str | int]] = []
+    identifiers: list[str] = []
+    data: list[list[str | int]] = []
     # We have to do this since we abuse a histplot, which are usually made for distributions
     # For sure this could be done in a better way, but it ain't stupid if it works, I guess...
     for group_identifier, frame in df_grouped:
+        # TODO: Is this a safe assumption? Under which circumstances would it not work?
+        if not isinstance(group_identifier, str):
+            raise TypeError(f'{dataframe=} produced a group identifier of type {type(group_identifier)} (value: {group_identifier}) when a string was expected.')
         identifiers.append(group_identifier)
         for _ in range(int(frame['tp'].mean())):
-            d.append([group_identifier, 'tp', 1])
+            data.append([group_identifier, 'tp', 1])
         for _ in range(int(frame['fp'].mean())):
-            d.append([group_identifier, 'fp', 1])
+            data.append([group_identifier, 'fp', 1])
         for _ in range(int(frame['fn'].mean())):
-            d.append([group_identifier, 'fn', 1])
+            data.append([group_identifier, 'fn', 1])
 
-    df_grouped = pd.DataFrame(d, columns=[groupby_attr, 'type', 'count'])
+    df_grouped = pd.DataFrame(data, columns=[groupby_attr, 'type', 'count'])
 
     # If the identifiers are ints (aka groupby_attr == 'budgets') we want log_scale enabled
     # Otherwise the histogram bars are squished together for small values
     plot: axes.Axes
-    if isinstance(identifiers[0], int):
+    if len(identifiers) > 0 and isinstance(identifiers[0], int):
         plot = sns.histplot(
             df_grouped,
             x=groupby_attr,
@@ -148,7 +155,7 @@ def create_TpFpFn_stacked_barplot(axiis: axes.Axes, dataframe: pd.DataFrame,
             ax=axiis,
             discrete=True,
             linewidth=.3,
-            bins=identifiers
+            bins=identifiers  # type: ignore (bins accepts lists which is not represented by the typings)
         )
     if custom_title is not None:
         plot.set_title(custom_title)
@@ -179,9 +186,12 @@ def create_onion_plot(axes: axes.Axes, dataframe: pd.DataFrame, groupby_attr: st
             tp_i, fp_i, fn_i = [int(x) for x in tp_i], [int(x) for x in fp_i], [int(x) for x in fn_i]
             # Iterate over the arity levels
             for arity, (tp_ii, fp_ii, fn_ii) in enumerate(zip(tp_i, fp_i, fn_i)):
-                if arity not in tps: tps[arity] = []
-                if arity not in fps: fps[arity] = []
-                if arity not in fns: fns[arity] = []
+                if arity not in tps:
+                    tps[arity] = []
+                if arity not in fps:
+                    fps[arity] = []
+                if arity not in fns:
+                    fns[arity] = []
                 tps[arity].append(tp_ii)
                 fps[arity].append(fp_ii)
                 fns[arity].append(fn_ii)
